@@ -275,6 +275,8 @@
 
                         loadModule(data.config, data.path || path, data.dependencies, data.closure);
                     }
+
+                    script.onload = script.onreadystatechange = null;
                 };
 
                 head.insertBefore(script, head.firstChild);
