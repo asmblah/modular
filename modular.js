@@ -104,19 +104,20 @@
     }
 
     function loadModule(config, path, dependencies, closure) {
+        var basePath = path || config.baseUrl || require.getBasePath();
+
         function allDependenciesLoaded() {
             var moduleValue = null;
 
             function processDependents() {
-                var fullPath = path || require.getBasePath(),
-                    callbacks;
+                var callbacks;
 
-                modules[fullPath] = moduleValue;
+                modules[path] = moduleValue;
 
-                if (pendings[fullPath]) {
-                    callbacks = pendings[fullPath];
+                if (pendings[path]) {
+                    callbacks = pendings[path];
 
-                    delete pendings[fullPath];
+                    delete pendings[path];
 
                     each(callbacks, function (dependencyLoaded) {
                         dependencyLoaded();
@@ -128,7 +129,7 @@
                 var args = [];
 
                 each(dependencies, function (dependencyPath) {
-                    var fullPath = makePath(path || require.getBasePath(), dependencyPath);
+                    var fullPath = makePath(basePath, dependencyPath);
 
                     args.push(modules[dependencyPath] || modules[fullPath]);
                 });
@@ -148,7 +149,7 @@
             var allResolved = true;
 
             each(dependencies, function (dependencyPath) {
-                var fullPath = makePath(path || require.getBasePath(), dependencyPath);
+                var fullPath = makePath(basePath, dependencyPath);
 
                 if (!modules[dependencyPath] && !modules[fullPath]) {
                     allResolved = false;
@@ -164,7 +165,7 @@
             var allResolved = true;
 
             each(dependencies, function (dependencyPath) {
-                var fullPath = makePath(path || require.getBasePath(), dependencyPath);
+                var fullPath = makePath(basePath, dependencyPath);
 
                 if (!modules[dependencyPath] && !modules[fullPath]) {
                     if (!pendings[fullPath]) {
@@ -183,6 +184,8 @@
                 allDependenciesLoaded();
             }
         }
+
+        config = extend({}, defaults, config);
 
         checkDependencies();
     }
