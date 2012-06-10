@@ -35,7 +35,9 @@
 
         for (key in obj) {
             if (obj.hasOwnProperty(key)) {
-                callback.call(obj[key], obj[key], key);
+                if (callback.call(obj[key], obj[key], key) === false) {
+                    break;
+                }
             }
         }
 
@@ -82,10 +84,9 @@
         return path;
     }
 
-    function makePath(path1, path2, pathMappings) {
-        var path,
-            previousPath = "",
-            components = path2.split("/");
+    function makePath(basePath, currentPath, path, pathMappings) {
+        var previousPath = "",
+            components = path.split("/");
 
         each(pathMappings || {}, function (to, from) {
             if (components[0] === from) {
@@ -93,9 +94,9 @@
             }
         });
 
-        path2 = components.join("/");
+        path = components.join("/");
 
-        path = getBasePath(path1) + path2;
+        path = getBasePath(/^\.\.?\//.test(path) ? currentPath : basePath) + path;
 
         path = path.replace(/\/\.\//g, "/"); // Resolve same-directory symbols
 
@@ -152,14 +153,32 @@
             config = null;
         }
 
-        config = extend({}, defaults, config || {});
-
         return {
-            config: config,
+            config: config || {},
             path: path || null,
             dependencies: dependencies || [],
             closure: closure || function () {}
         };
+    }
+
+    function findModule(names) {
+        var result = null;
+
+        each(names, function (name) {
+            if (modules.hasOwnProperty(name)) {
+                result = name;
+
+                return false;
+            }
+        });
+
+        return result;
+    }
+
+    function getModule(names) {
+        var name = findModule(names);
+
+        return name ? modules[name] : null;
     }
 
     function ready(config, path, dependencies, closure) {
@@ -188,19 +207,17 @@
                 var args = [];
 
                 each(dependencies, function (dependencyPath) {
-                    var fullPath = makePath(path, dependencyPath, config.paths);
+                    var fullPath = makePath(config.baseUrl, path, dependencyPath, config.paths);
 
                     // Scoped require support
                     if (dependencyPath === "require") {
                         args.push(function (arg1, arg2, arg3, arg4) {
                             var args = parse(arg1, arg2, arg3, arg4);
 
-                            global.require(extend({}, args.config, {
-                                baseUrl: path
-                            }), args.path, args.dependencies, args.closure);
+                            global.require(extend({}, config, args.config), args.path || path, args.dependencies, args.closure);
                         });
                     } else {
-                        args.push(modules[dependencyPath] || modules[fullPath]);
+                        args.push(getModule([dependencyPath, fullPath]));
                     }
                 });
 
@@ -209,19 +226,17 @@
 
             moduleValue = evaluateModule();
 
-            if (path) {
-                // Modules may have no path (eg. an anonymous require(...))
-                processDependents();
-            }
+            // Modules may have no path (eg. an anonymous require(...))
+            processDependents();
         }
 
         function checkDependencies() {
             var allResolved = true;
 
             each(dependencies, function (dependencyPath) {
-                var fullPath = makePath(path, dependencyPath, config.paths);
+                var fullPath = makePath(config.baseUrl, path, dependencyPath, config.paths);
 
-                if (dependencyPath !== "require" && !modules[dependencyPath] && !modules[fullPath]) {
+                if (dependencyPath !== "require" && !findModule([dependencyPath, fullPath])) {
                     if (!fetched) {
                         if (!pendings[fullPath]) {
                             pendings[fullPath] = [];
@@ -247,24 +262,28 @@
     }
 
     // Exports
-    global.require = function (arg1, arg2, arg3, arg4) {
+    global.require = global.requirejs = function (arg1, arg2, arg3, arg4) {
         var args = parse(arg1, arg2, arg3, arg4);
 
-        ready(args.config, args.path || args.config.baseUrl, args.dependencies, args.closure);
+        ready(extend({}, defaults, args.config), args.path || args.config.baseUrl, args.dependencies, args.closure);
     };
     global.define = function (arg1, arg2, arg3, arg4) {
         var args = parse(arg1, arg2, arg3, arg4);
 
         if (args.path) {
-            ready(args.config, args.path, args.dependencies, args.closure);
+            ready(extend({}, defaults, args.config), args.path, args.dependencies, args.closure);
         } else {
-            args.config.anonymous(args);
+            extend({}, defaults, args.config).anonymous(args);
         }
     };
 
     // Publish support for the AMD pattern
     global.define.amd = {
         jQuery: true
+    };
+
+    global.require.onError = function (msg) {
+        throw new Error(msg);
     };
 
     extend(defaults, (function () {
@@ -275,7 +294,8 @@
             baseUrl: global.location.pathname,
             // Overridable - called when a module needs to be loaded
             fetch: function fetch(path, ready) {
-                var script = global.document.createElement("script");
+                var script = global.document.createElement("script"),
+                    config = this;
 
                 script.setAttribute("type", "text/javascript");
                 script.setAttribute("src", path);
@@ -286,7 +306,11 @@
                     if (!this.readyState || this.readyState === "loaded" || this.readyState === "complete") {
                         args = anonymouses.pop();
 
-                        ready(args.config, args.path || path, args.dependencies, args.closure);
+                        if (args) {
+                            ready(extend({}, config, args.config), args.path || path, args.dependencies, args.closure);
+                        } else {
+                            ready({}, path, [], null);
+                        }
                     }
 
                     script.onload = script.onreadystatechange = null;
