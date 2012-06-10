@@ -131,7 +131,14 @@
                 each(dependencies, function (dependencyPath) {
                     var fullPath = makePath(basePath, dependencyPath);
 
-                    args.push(modules[dependencyPath] || modules[fullPath]);
+                    if (dependencyPath === "require") {
+                        // TODO: Scoped require
+                        /*args.push(function () {
+                            alert("TODO: scoped require!");
+                        });*/
+                    } else {
+                        args.push(modules[dependencyPath] || modules[fullPath]);
+                    }
                 });
 
                 return closure.apply(global, args);
@@ -151,7 +158,7 @@
             each(dependencies, function (dependencyPath) {
                 var fullPath = makePath(basePath, dependencyPath);
 
-                if (!modules[dependencyPath] && !modules[fullPath]) {
+                if (dependencyPath !== "require" && !modules[dependencyPath] && !modules[fullPath]) {
                     allResolved = false;
                 }
             });
@@ -167,7 +174,7 @@
             each(dependencies, function (dependencyPath) {
                 var fullPath = makePath(basePath, dependencyPath);
 
-                if (!modules[dependencyPath] && !modules[fullPath]) {
+                if (dependencyPath !== "require" && !modules[dependencyPath] && !modules[fullPath]) {
                     if (!pendings[fullPath]) {
                         pendings[fullPath] = [];
 
