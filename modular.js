@@ -158,6 +158,8 @@
     }
 
     function ready(config, path, dependencies, closure) {
+        var fetched = false;
+
         function allDependenciesLoaded() {
             var moduleValue = null;
 
@@ -208,22 +210,6 @@
             }
         }
 
-        function dependencyLoaded() {
-            var allResolved = true;
-
-            each(dependencies, function (dependencyPath) {
-                var fullPath = makePath(path, dependencyPath, config.paths);
-
-                if (dependencyPath !== "require" && !modules[dependencyPath] && !modules[fullPath]) {
-                    allResolved = false;
-                }
-            });
-
-            if (allResolved) {
-                allDependenciesLoaded();
-            }
-        }
-
         function checkDependencies() {
             var allResolved = true;
 
@@ -231,17 +217,21 @@
                 var fullPath = makePath(path, dependencyPath, config.paths);
 
                 if (dependencyPath !== "require" && !modules[dependencyPath] && !modules[fullPath]) {
-                    if (!pendings[fullPath]) {
-                        pendings[fullPath] = [];
+                    if (!fetched) {
+                        if (!pendings[fullPath]) {
+                            pendings[fullPath] = [];
 
-                        config.fetch(fullPath, ready);
+                            config.fetch(fullPath, ready);
+                        }
+
+                        pendings[fullPath].push(checkDependencies);
                     }
-
-                    pendings[fullPath].push(dependencyLoaded);
 
                     allResolved = false;
                 }
             });
+
+            fetched = true;
 
             if (allResolved) {
                 allDependenciesLoaded();
