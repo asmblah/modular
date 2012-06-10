@@ -185,7 +185,7 @@
         return name ? modules[name] : null;
     }
 
-    function ready(config, path, dependencies, closure) {
+    function ready(config, path, dependencies, closure, options) {
         var fetched = false;
 
         function allDependenciesLoaded() {
@@ -194,7 +194,11 @@
             function processDependents() {
                 var callbacks;
 
-                modules[path] = moduleValue;
+                // Caching may be explicitly disabled, eg. for scoped requires (which would otherwise
+                //  overwrite their container module)
+                if (options.cache !== false) {
+                    modules[path] = moduleValue;
+                }
 
                 if (pendings[path]) {
                     callbacks = pendings[path];
@@ -218,7 +222,9 @@
                         args.push(function (arg1, arg2, arg3, arg4) {
                             var args = parse(arg1, arg2, arg3, arg4);
 
-                            global.require(extend({}, config, args.config), args.path || path, args.dependencies, args.closure);
+                            ready(extend({}, config, args.config), args.path || path, args.dependencies, args.closure, {
+                                cache: false
+                            });
                         });
                     } else {
                         args.push(getModule([dependencyPath, fullPath]));
@@ -261,6 +267,8 @@
                 allDependenciesLoaded();
             }
         }
+
+        options = options || {};
 
         checkDependencies();
     }
@@ -309,6 +317,17 @@
     if (global.document) {
         extend(defaults, (function () {
             var head = global.document.getElementsByTagName("head")[0],
+                on = head.addEventListener ? function (node, type, callback) {
+                    node.addEventListener(type, callback, false);
+                } : function (node, type, callback) {
+                    node.attachEvent("on" + type, callback);
+                },
+                off = head.removeEventListener ? function (node, type, callback) {
+                    node.removeEventListener(type, callback, false);
+                } : function (node, type, callback) {
+                    node.detachEvent("on" + type, callback);
+                },
+                useOnLoad = head.addEventListener,
                 anonymouses = [];
 
             return {
@@ -318,13 +337,10 @@
                     var script = global.document.createElement("script"),
                         config = this;
 
-                    script.setAttribute("type", "text/javascript");
-                    script.setAttribute("src", path);
-
-                    script.onload = script.onreadystatechange = function () {
+                    on(script, useOnLoad ? "load" : "readystatechange", function onLoad(evt) {
                         var args;
 
-                        if (!this.readyState || this.readyState === "loaded" || this.readyState === "complete") {
+                        if (evt.type === "load" || this.readyState === "loaded" || this.readyState === "complete") {
                             args = anonymouses.pop();
 
                             if (args) {
@@ -334,8 +350,11 @@
                             }
                         }
 
-                        script.onload = script.onreadystatechange = null;
-                    };
+                        off(script, useOnLoad ? "load" : "readystatechange", onLoad);
+                    });
+
+                    script.setAttribute("type", "text/javascript");
+                    script.setAttribute("src", path);
 
                     head.insertBefore(script, head.firstChild);
                 },
