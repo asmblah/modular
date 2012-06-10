@@ -114,10 +114,10 @@
     }
 
     function parse(arg1, arg2, arg3, arg4) {
-        var config = {},
-            path = null,
-            dependencies = [],
-            closure = function () {};
+        var config,
+            path,
+            dependencies,
+            closure;
 
         if (isPlainObject(arg1)) {
             config = arg1;
@@ -147,13 +147,18 @@
             closure = arg4;
         }
 
-        config = extend({}, defaults, config);
+        if (config && !path && !dependencies && !closure) {
+            closure = config;
+            config = null;
+        }
+
+        config = extend({}, defaults, config || {});
 
         return {
             config: config,
-            path: path,
-            dependencies: dependencies,
-            closure: closure
+            path: path || null,
+            dependencies: dependencies || [],
+            closure: closure || function () {}
         };
     }
 
@@ -199,7 +204,7 @@
                     }
                 });
 
-                return closure.apply(global, args);
+                return isFunction(closure) ? closure.apply(global, args) : closure;
             }
 
             moduleValue = evaluateModule();
