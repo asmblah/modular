@@ -27,9 +27,9 @@
 
     var global = new Function("return this;")(),
         defaults = {
-            baseUrl: "",
-            fetch: function (path, ready) {},
-            anonymous: function (args) {}
+            "baseUrl": "",
+            "fetch": function (path, ready) {},
+            "anonymous": function (args) {}
         },
         pendings = {},
         modules = {};
@@ -265,13 +265,13 @@
         checkDependencies();
     }
 
-    // Exports
-    global.require = global.requirejs = function (arg1, arg2, arg3, arg4) {
+    function require(arg1, arg2, arg3, arg4) {
         var args = parse(arg1, arg2, arg3, arg4);
 
         ready(extend({}, defaults, args.config), args.path || args.config.baseUrl, args.dependencies, args.closure);
-    };
-    global.define = function (arg1, arg2, arg3, arg4) {
+    }
+
+    function define(arg1, arg2, arg3, arg4) {
         var args = parse(arg1, arg2, arg3, arg4),
             config = extend({}, defaults, args.config);
 
@@ -280,22 +280,29 @@
         } else {
             config.anonymous(args);
         }
-    };
+    }
 
-    extend(global.require, {
-        config: function (config) {
+    extend(require, {
+        "config": function (config) {
             extend(defaults, config);
         },
-        onError: function (msg) {
+        "onError": function (msg) {
             throw new Error(msg);
         }
     });
 
-    extend(global.define, {
+    extend(define, {
         // Publish support for the AMD pattern
-        amd: {
-            jQuery: true
+        "amd": {
+            "jQuery": true
         }
+    });
+
+    // Exports
+    extend(global, {
+        "require": require,
+        "requirejs": require,
+        "define": define
     });
 
     // Browser environment support
@@ -305,9 +312,9 @@
                 anonymouses = [];
 
             return {
-                baseUrl: global.location.pathname,
+                "baseUrl": global.location.pathname,
                 // Overridable - called when a module needs to be loaded
-                fetch: function (path, ready) {
+                "fetch": function (path, ready) {
                     var script = global.document.createElement("script"),
                         config = this;
 
@@ -332,7 +339,7 @@
 
                     head.insertBefore(script, head.firstChild);
                 },
-                anonymous: function (args) {
+                "anonymous": function (args) {
                     anonymouses.push(args);
                 }
             };
