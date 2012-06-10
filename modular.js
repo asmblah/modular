@@ -26,7 +26,11 @@
     "use strict";
 
     var global = new Function("return this;")(),
-        defaults = {},
+        defaults = {
+            baseUrl: "",
+            fetch: function (path, ready) {},
+            anonymous: function (args) {}
+        },
         pendings = {},
         modules = {};
 
