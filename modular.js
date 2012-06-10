@@ -293,6 +293,7 @@
         }
     });
 
+    // Browser environment support
     extend(defaults, (function () {
         var head = global.document.getElementsByTagName("head")[0],
             anonymouses = [];
