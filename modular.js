@@ -185,8 +185,8 @@
                 each(dependencies, function (dependencyPath) {
                     var fullPath = makePath(path, dependencyPath, config.paths);
 
+                    // Scoped require support
                     if (dependencyPath === "require") {
-                        // TODO: Scoped require
                         args.push(function (arg1, arg2, arg3, arg4) {
                             var args = parse(arg1, arg2, arg3, arg4);
 
