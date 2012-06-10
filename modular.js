@@ -298,41 +298,43 @@
     });
 
     // Browser environment support
-    extend(defaults, (function () {
-        var head = global.document.getElementsByTagName("head")[0],
-            anonymouses = [];
+    if (global.document) {
+        extend(defaults, (function () {
+            var head = global.document.getElementsByTagName("head")[0],
+                anonymouses = [];
 
-        return {
-            baseUrl: global.location.pathname,
-            // Overridable - called when a module needs to be loaded
-            fetch: function fetch(path, ready) {
-                var script = global.document.createElement("script"),
-                    config = this;
+            return {
+                baseUrl: global.location.pathname,
+                // Overridable - called when a module needs to be loaded
+                fetch: function fetch(path, ready) {
+                    var script = global.document.createElement("script"),
+                        config = this;
 
-                script.setAttribute("type", "text/javascript");
-                script.setAttribute("src", path);
+                    script.setAttribute("type", "text/javascript");
+                    script.setAttribute("src", path);
 
-                script.onload = script.onreadystatechange = function () {
-                    var args;
+                    script.onload = script.onreadystatechange = function () {
+                        var args;
 
-                    if (!this.readyState || this.readyState === "loaded" || this.readyState === "complete") {
-                        args = anonymouses.pop();
+                        if (!this.readyState || this.readyState === "loaded" || this.readyState === "complete") {
+                            args = anonymouses.pop();
 
-                        if (args) {
-                            ready(extend({}, config, args.config), args.path || path, args.dependencies, args.closure);
-                        } else {
-                            ready({}, path, [], null);
+                            if (args) {
+                                ready(extend({}, config, args.config), args.path || path, args.dependencies, args.closure);
+                            } else {
+                                ready({}, path, [], null);
+                            }
                         }
-                    }
 
-                    script.onload = script.onreadystatechange = null;
-                };
+                        script.onload = script.onreadystatechange = null;
+                    };
 
-                head.insertBefore(script, head.firstChild);
-            },
-            anonymous: function (args) {
-                anonymouses.push(args);
-            }
-        };
-    }()));
+                    head.insertBefore(script, head.firstChild);
+                },
+                anonymous: function (args) {
+                    anonymouses.push(args);
+                }
+            };
+        }()));
+    }
 }());
