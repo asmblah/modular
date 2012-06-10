@@ -277,14 +277,21 @@
         }
     };
 
-    // Publish support for the AMD pattern
-    global.define.amd = {
-        jQuery: true
-    };
+    extend(global.require, {
+        config: function (config) {
+            extend(defaults, config);
+        },
+        onError: function (msg) {
+            throw new Error(msg);
+        }
+    });
 
-    global.require.onError = function (msg) {
-        throw new Error(msg);
-    };
+    extend(global.define, {
+        // Publish support for the AMD pattern
+        amd: {
+            jQuery: true
+        }
+    });
 
     extend(defaults, (function () {
         var head = global.document.getElementsByTagName("head")[0],
