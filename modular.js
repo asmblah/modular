@@ -306,7 +306,7 @@
             return {
                 baseUrl: global.location.pathname,
                 // Overridable - called when a module needs to be loaded
-                fetch: function fetch(path, ready) {
+                fetch: function (path, ready) {
                     var script = global.document.createElement("script"),
                         config = this;
 
