@@ -103,101 +103,7 @@
         return path;
     }
 
-    function loadModule(config, path, dependencies, closure) {
-        var basePath = path || config.baseUrl || require.getBasePath();
-
-        function allDependenciesLoaded() {
-            var moduleValue = null;
-
-            function processDependents() {
-                var callbacks;
-
-                modules[path] = moduleValue;
-
-                if (pendings[path]) {
-                    callbacks = pendings[path];
-
-                    delete pendings[path];
-
-                    each(callbacks, function (dependencyLoaded) {
-                        dependencyLoaded();
-                    });
-                }
-            }
-
-            function evaluateModule() {
-                var args = [];
-
-                each(dependencies, function (dependencyPath) {
-                    var fullPath = makePath(basePath, dependencyPath);
-
-                    if (dependencyPath === "require") {
-                        // TODO: Scoped require
-                        /*args.push(function () {
-                            alert("TODO: scoped require!");
-                        });*/
-                    } else {
-                        args.push(modules[dependencyPath] || modules[fullPath]);
-                    }
-                });
-
-                return closure.apply(global, args);
-            }
-
-            moduleValue = evaluateModule();
-
-            if (path) {
-                // Modules may have no path (eg. an anonymous require(...))
-                processDependents();
-            }
-        }
-
-        function dependencyLoaded() {
-            var allResolved = true;
-
-            each(dependencies, function (dependencyPath) {
-                var fullPath = makePath(basePath, dependencyPath);
-
-                if (dependencyPath !== "require" && !modules[dependencyPath] && !modules[fullPath]) {
-                    allResolved = false;
-                }
-            });
-
-            if (allResolved) {
-                allDependenciesLoaded();
-            }
-        }
-
-        function checkDependencies() {
-            var allResolved = true;
-
-            each(dependencies, function (dependencyPath) {
-                var fullPath = makePath(basePath, dependencyPath);
-
-                if (dependencyPath !== "require" && !modules[dependencyPath] && !modules[fullPath]) {
-                    if (!pendings[fullPath]) {
-                        pendings[fullPath] = [];
-
-                        require.get(fullPath, loadModule);
-                    }
-
-                    pendings[fullPath].push(dependencyLoaded);
-
-                    allResolved = false;
-                }
-            });
-
-            if (allResolved) {
-                allDependenciesLoaded();
-            }
-        }
-
-        config = extend({}, defaults, config);
-
-        checkDependencies();
-    }
-
-    function overload(arg1, arg2, arg3, arg4) {
+    function parse(arg1, arg2, arg3, arg4) {
         var config = {},
             path = null,
             dependencies = [],
@@ -231,6 +137,8 @@
             closure = arg4;
         }
 
+        config = extend({}, defaults, config);
+
         return {
             config: config,
             path: path,
@@ -239,48 +147,141 @@
         };
     }
 
-    function require(arg1, arg2, arg3, arg4) {
-        var data = overload(arg1, arg2, arg3, arg4);
+    function ready(path, dependencies, closure, fetch) {
+        function allDependenciesLoaded() {
+            var moduleValue = null;
 
-        loadModule(data.config, null, data.dependencies, data.closure);
-    }
+            function processDependents() {
+                var callbacks;
 
-    function define(arg1, arg2, arg3, arg4) {
-        var data = overload(arg1, arg2, arg3, arg4);
+                modules[path] = moduleValue;
 
-        if (data.path) {
-            loadModule(data.config, data.path, data.dependencies, data.closure);
-        } else {
-            require.define(data);
+                if (pendings[path]) {
+                    callbacks = pendings[path];
+
+                    delete pendings[path];
+
+                    each(callbacks, function (dependencyLoaded) {
+                        dependencyLoaded();
+                    });
+                }
+            }
+
+            function evaluateModule() {
+                var args = [];
+
+                each(dependencies, function (dependencyPath) {
+                    var fullPath = makePath(path, dependencyPath);
+
+                    if (dependencyPath === "require") {
+                        // TODO: Scoped require
+                        args.push(function (arg1, arg2, arg3, arg4) {
+                            var args = parse(arg1, arg2, arg3, arg4);
+
+                            global.require(extend({}, args.config, {
+                                baseUrl: path
+                            }), args.path, args.dependencies, args.closure);
+                        });
+                    } else {
+                        args.push(modules[dependencyPath] || modules[fullPath]);
+                    }
+                });
+
+                return closure.apply(global, args);
+            }
+
+            moduleValue = evaluateModule();
+
+            if (path) {
+                // Modules may have no path (eg. an anonymous require(...))
+                processDependents();
+            }
         }
+
+        function dependencyLoaded() {
+            var allResolved = true;
+
+            each(dependencies, function (dependencyPath) {
+                var fullPath = makePath(path, dependencyPath);
+
+                if (dependencyPath !== "require" && !modules[dependencyPath] && !modules[fullPath]) {
+                    allResolved = false;
+                }
+            });
+
+            if (allResolved) {
+                allDependenciesLoaded();
+            }
+        }
+
+        function checkDependencies() {
+            var allResolved = true;
+
+            each(dependencies, function (dependencyPath) {
+                var fullPath = makePath(path, dependencyPath);
+
+                if (dependencyPath !== "require" && !modules[dependencyPath] && !modules[fullPath]) {
+                    if (!pendings[fullPath]) {
+                        pendings[fullPath] = [];
+
+                        fetch(fullPath, ready);
+                    }
+
+                    pendings[fullPath].push(dependencyLoaded);
+
+                    allResolved = false;
+                }
+            });
+
+            if (allResolved) {
+                allDependenciesLoaded();
+            }
+        }
+
+        checkDependencies();
     }
 
-    define.amd = {
+    // Exports
+    global.require = function (arg1, arg2, arg3, arg4) {
+        var args = parse(arg1, arg2, arg3, arg4);
+
+        ready(args.path || args.config.baseUrl, args.dependencies, args.closure, args.config.fetch);
+    };
+    global.define = function (arg1, arg2, arg3, arg4) {
+        var args = parse(arg1, arg2, arg3, arg4);
+
+        if (args.path) {
+            ready(args.path, args.dependencies, args.closure, args.config.fetch);
+        } else {
+            args.config.anonymous(args);
+        }
+    };
+
+    // Publish support for the AMD pattern
+    global.define.amd = {
         jQuery: true
     };
 
-    extend(require, (function () {
+    extend(defaults, (function () {
         var head = global.document.getElementsByTagName("head")[0],
-            defines = [];
+            anonymouses = [];
 
         return {
-            getBasePath: function () {
-                return global.location.pathname;
-            },
+            baseUrl: global.location.pathname,
             // Overridable - called when a module needs to be loaded
-            get: function (path, loadModule) {
+            fetch: function fetch(path, ready) {
                 var script = global.document.createElement("script");
 
                 script.setAttribute("type", "text/javascript");
                 script.setAttribute("src", path);
 
                 script.onload = script.onreadystatechange = function () {
-                    var data;
+                    var args;
 
                     if (!this.readyState || this.readyState === "loaded" || this.readyState === "complete") {
-                        data = defines.pop();
+                        args = anonymouses.pop();
 
-                        loadModule(data.config, data.path || path, data.dependencies, data.closure);
+                        ready(args.path || path, args.dependencies, args.closure, fetch);
                     }
 
                     script.onload = script.onreadystatechange = null;
@@ -288,13 +289,9 @@
 
                 head.insertBefore(script, head.firstChild);
             },
-            define: function (data) {
-                defines.push(data);
+            anonymous: function (args) {
+                anonymouses.push(args);
             }
         };
     }()));
-
-    // Exports
-    global.require = require;
-    global.define = define;
 }());
