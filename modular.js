@@ -272,12 +272,13 @@
         ready(extend({}, defaults, args.config), args.path || args.config.baseUrl, args.dependencies, args.closure);
     };
     global.define = function (arg1, arg2, arg3, arg4) {
-        var args = parse(arg1, arg2, arg3, arg4);
+        var args = parse(arg1, arg2, arg3, arg4),
+            config = extend({}, defaults, args.config);
 
         if (args.path) {
-            ready(extend({}, defaults, args.config), args.path, args.dependencies, args.closure);
+            ready(config, args.path, args.dependencies, args.closure);
         } else {
-            extend({}, defaults, args.config).anonymous(args);
+            config.anonymous(args);
         }
     };
 
