@@ -35,17 +35,30 @@
         modules = {};
 
     function each(obj, callback) {
-        var key;
+        var key,
+            length;
 
-        for (key in obj) {
-            if (obj.hasOwnProperty(key)) {
-                if (callback.call(obj[key], obj[key], key) === false) {
-                    break;
+        if (!obj) {
+            return;
+        }
+
+        if (obj.hasOwnProperty("length")) {
+            for (key = 0, length = obj.length; key < length; key += 1) { // Keep JSLint happy with "+= 1"
+                if (obj.hasOwnProperty(key)) {
+                    if (callback.call(obj[key], obj[key], key) === false) {
+                        break;
+                    }
+                }
+            }
+        } else {
+            for (key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                    if (callback.call(obj[key], obj[key], key) === false) {
+                        break;
+                    }
                 }
             }
         }
-
-        return obj;
     }
 
     function extend(target) {
@@ -88,6 +101,14 @@
         return path;
     }
 
+    function implicitExtension(path) {
+        if (path.substr(path.length - 3) !== ".js") {
+            path += ".js";
+        }
+
+        return path;
+    }
+
     function makePath(basePath, currentPath, path, pathMappings) {
         var previousPath = "",
             components = path.split("/");
@@ -110,12 +131,7 @@
             path = path.replace(/[^\/]*\/\.\.\//, "");
         }
 
-        // Append implicit ".js" extension
-        if (path.substr(path.length - 3) !== ".js") {
-            path += ".js";
-        }
-
-        return path;
+        return implicitExtension(path);
     }
 
     function parse(arg1, arg2, arg3, arg4) {
@@ -185,6 +201,18 @@
         return name ? modules[name] : null;
     }
 
+    function depend(path, fetch, recheck) {
+        if (!pendings[path]) {
+            pendings[path] = [];
+
+            fetch(path);
+        }
+
+        if (recheck) {
+            pendings[path].push(recheck);
+        }
+    }
+
     function ready(config, path, dependencies, closure, options) {
         var fetched = false;
 
@@ -248,13 +276,9 @@
 
                 if (dependencyPath !== "require" && !findModule([dependencyPath, fullPath])) {
                     if (!fetched) {
-                        if (!pendings[fullPath]) {
-                            pendings[fullPath] = [];
-
-                            config.fetch(fullPath, ready);
-                        }
-
-                        pendings[fullPath].push(checkDependencies);
+                        depend(fullPath, function (path) {
+                            config.fetch(path, ready);
+                        }, checkDependencies);
                     }
 
                     allResolved = false;
@@ -363,5 +387,15 @@
                 }
             };
         }()));
+
+        each(global.document.getElementsByTagName("script"), function () {
+            var main = this.getAttribute("data-main");
+
+            if (main) {
+                depend(implicitExtension(main), function (path) {
+                    defaults.fetch(path, ready);
+                });
+            }
+        });
     }
 }());
