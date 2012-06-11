@@ -92,8 +92,7 @@
         empty = {},
         reservedDependencies = {
             "require": true,
-            "exports": true,
-            "module": true
+            "exports": true
         };
 
     function extend(target) {
