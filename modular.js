@@ -250,7 +250,7 @@
         var fetched = false;
 
         function allDependenciesLoaded() {
-            var moduleValue = null;
+            var moduleValue;
 
             function processDependents() {
                 var callbacks;
