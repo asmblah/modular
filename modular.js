@@ -25,19 +25,6 @@
 (function () {
     "use strict";
 
-    var global = new [Function][0]("return this;")(), // Keep JSLint happy
-        defaults = {
-            "baseUrl": "",
-            "paths": {},
-            "pathFilter": function (path) {
-                return path;
-            },
-            "fetch": function (config, path, ready) {},
-            "anonymous": function (args) {}
-        },
-        pendings = {},
-        modules = {};
-
     function each(obj, callback) {
         var key,
             length;
@@ -64,6 +51,45 @@
             }
         }
     }
+
+    // For Closure compiler name-munging while keeping JSLint happy
+    function lookup(obj, name) {
+        return obj[name];
+    }
+
+    var global = new [Function][0]("return this;")(), // Keep JSLint happy
+        defaults = {
+            "baseUrl": "",
+            "paths": {},
+            "pathFilter": function (path) {
+                return path;
+            },
+            "versions": {},
+            "versionFilter": function (stack, path, version) {
+                var val = stack[0];
+
+                if (path === "jquery" && version) {
+                    val = null;
+
+                    each(stack, function () {
+                        if (lookup(this(), "jquery") === version) {
+                            val = this;
+
+                            return false;
+                        }
+                    });
+                }
+
+                return {
+                    val: val
+                };
+            },
+            "fetch": function (config, path, ready) {},
+            "anonymous": function (args) {}
+        },
+        pendings = {},
+        modules = {},
+        empty = {};
 
     function extend(target) {
         each([].slice.call(arguments, 1), function () {
@@ -93,14 +119,6 @@
 
     function isFunction(str) {
         return getType(str) === "Function";
-    }
-
-    // For Closure compiler name-munging while keeping JSLint happy
-    function lookup(obj, name) {
-        return obj[name];
-    }
-    function put(obj, name, val) {
-        obj[name] = val;
     }
 
     function getBasePath(path) {
@@ -193,24 +211,22 @@
         };
     }
 
-    function findModule(names) {
+    function getModule(path, config) {
         var result = null;
 
-        each(names, function (name) {
-            if (modules.hasOwnProperty(name)) {
-                result = name;
+        if (!modules.hasOwnProperty(path)) {
+            return null;
+        }
 
-                return false;
-            }
-        });
-
-        return result;
+        return lookup(config, "versionFilter")(modules[path], path, lookup(config, "versions")[path]);
     }
 
-    function getModule(names) {
-        var name = findModule(names);
+    function addModule(path, val) {
+        if (!modules[path]) {
+            modules[path] = [];
+        }
 
-        return name ? modules[name] : null;
+        modules[path].push(val);
     }
 
     function depend(path, fetch, recheck) {
@@ -232,19 +248,12 @@
             var moduleValue = null;
 
             function processDependents() {
-                var callbacks,
-                    jQuery = lookup(global, "jQuery"),
-                    jQueryVersion = lookup(config, "jQuery");
+                var callbacks;
 
                 // Caching may be explicitly disabled, eg. for scoped requires (which would otherwise
                 //  overwrite their container module)
-                if (options.cache !== false && (
-                        // jQuery versioning support
-                        path !== "jquery" || !jQueryVersion || !jQuery ||
-                        lookup(jQuery(), "jquery") === jQueryVersion
-                    )) {
-
-                    modules[path] = moduleValue;
+                if (options.cache !== false) {
+                    addModule(path, moduleValue);
 
                     if (pendings[path]) {
                         callbacks = pendings[path];
@@ -274,7 +283,7 @@
                             });
                         });
                     } else {
-                        args.push(getModule([dependencyPath, fullPath]));
+                        args.push((getModule(dependencyPath, config) || getModule(fullPath, config)).val);
                     }
                 });
 
@@ -293,7 +302,7 @@
             each(dependencies, function (dependencyPath) {
                 var fullPath = makePath(lookup(config, "baseUrl"), path, dependencyPath, config);
 
-                if (dependencyPath !== "require" && !findModule([dependencyPath, fullPath])) {
+                if (dependencyPath !== "require" && !getModule(dependencyPath, config) && !getModule(fullPath, config)) {
                     if (!fetched) {
                         depend(fullPath, function (path) {
                             lookup(config, "fetch")(config, path, ready);
@@ -425,8 +434,8 @@
                 }
             });
 
-            if (!findModule(["jquery"]) && jQuery) {
-                put(modules, "jquery", jQuery);
+            if (!getModule("jquery", defaults) && jQuery) {
+                addModule("jquery", jQuery);
             }
         }());
     }
