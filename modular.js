@@ -35,10 +35,8 @@
 
         if (obj.hasOwnProperty("length")) {
             for (key = 0, length = obj.length; key < length; key += 1) { // Keep JSLint happy with "+= 1"
-                if (obj.hasOwnProperty(key)) {
-                    if (callback.call(obj[key], obj[key], key) === false) {
-                        break;
-                    }
+                if (callback.call(obj[key], obj[key], key) === false) {
+                    break;
                 }
             }
         } else {
