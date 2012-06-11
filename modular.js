@@ -375,8 +375,8 @@
 
     // Browser environment support
     if (global.document) {
-        (function () {
-            var head = global.document.getElementsByTagName("head")[0],
+        (function (document) {
+            var head = document.getElementsByTagName("head")[0],
                 on = head.addEventListener ? function (node, type, callback) {
                     node.addEventListener(type, callback, false);
                 } : function (node, type, callback) {
@@ -396,7 +396,7 @@
                 "baseUrl": global.location.pathname,
                 // Overridable - called when a module needs to be loaded
                 "fetch": function (config, path, ready) {
-                    var script = global.document.createElement("script");
+                    var script = document.createElement("script");
 
                     on(script, useOnLoad ? "load" : "readystatechange", function onLoad(evt) {
                         var args;
@@ -424,7 +424,7 @@
                 }
             });
 
-            each(global.document.getElementsByTagName("script"), function () {
+            each(document.getElementsByTagName("script"), function () {
                 var main = this.getAttribute("data-main");
 
                 function pull() {
@@ -445,6 +445,6 @@
             if (!getModule("jquery", defaults) && jQuery) {
                 addModule("jquery", jQuery);
             }
-        }());
+        }(global.document));
     }
 }());
