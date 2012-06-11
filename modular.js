@@ -393,6 +393,8 @@
                             }
 
                             off(script, useOnLoad ? "load" : "readystatechange", onLoad);
+
+                            head.removeChild(script);
                         }
                     });
 
