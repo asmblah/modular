@@ -240,16 +240,16 @@
                     )) {
 
                     modules[path] = moduleValue;
-                }
 
-                if (pendings[path]) {
-                    callbacks = pendings[path];
+                    if (pendings[path]) {
+                        callbacks = pendings[path];
 
-                    delete pendings[path];
+                        delete pendings[path];
 
-                    each(callbacks, function (dependencyLoaded) {
-                        dependencyLoaded();
-                    });
+                        each(callbacks, function (dependencyLoaded) {
+                            dependencyLoaded();
+                        });
+                    }
                 }
             }
 
