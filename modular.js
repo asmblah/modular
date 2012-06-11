@@ -25,6 +25,26 @@
 (function () {
     "use strict";
 
+    var global = new [Function][0]("return this;")(), // Keep JSLint happy
+        defaults = {
+            "baseUrl": "",
+            "paths": {},
+            "pathFilter": function (path) {
+                return path;
+            },
+            "versions": {},
+            "versionFilter": function (stack, path, version) {
+                return {
+                    val: stack[0]
+                };
+            },
+            "fetch": function (config, path, ready) {},
+            "anonymous": function (args) {}
+        },
+        pendings = {},
+        modules = {},
+        has = {}.hasOwnProperty;
+
     function each(obj, callback) {
         var key,
             length;
@@ -33,7 +53,7 @@
             return;
         }
 
-        if (obj.hasOwnProperty("length")) {
+        if (has.call(obj, "length")) {
             for (key = 0, length = obj.length; key < length; key += 1) { // Keep JSLint happy with "+= 1"
                 if (callback.call(obj[key], obj[key], key) === false) {
                     break;
@@ -54,39 +74,9 @@
     function lookup(obj, name) {
         return obj[name];
     }
-
-    var global = new [Function][0]("return this;")(), // Keep JSLint happy
-        defaults = {
-            "baseUrl": "",
-            "paths": {},
-            "pathFilter": function (path) {
-                return path;
-            },
-            "versions": {},
-            "versionFilter": function (stack, path, version) {
-                var val = stack[0];
-
-                if (path === "jquery" && version) {
-                    val = null;
-
-                    each(stack, function () {
-                        if (lookup(this(), "jquery") === version) {
-                            val = this;
-
-                            return false;
-                        }
-                    });
-                }
-
-                return {
-                    val: val
-                };
-            },
-            "fetch": function (config, path, ready) {},
-            "anonymous": function (args) {}
-        },
-        pendings = {},
-        modules = {};
+    function put(obj, name, val) {
+        obj[name] = val;
+    }
 
     function extend(target) {
         each([].slice.call(arguments, 1), function () {
@@ -370,41 +360,113 @@
                     node.detachEvent("on" + type, callback);
                 },
                 useOnLoad = head.addEventListener && (!head.attachEvent || global.opera),
-                useDOMContentLoaded = {}.hasOwnProperty.call(global, "DOMContentLoaded"),
+                useDOMContentLoaded = has.call(global, "DOMContentLoaded"),
                 jQuery = lookup(global, "jQuery"),
-                anonymouses = [];
+                anonymouses = [],
+                activeScript = null;
+
+            function gotModule(context, args) {
+                if (args) {
+                    context.ready(extend({}, context.config, args.config), args.path || context.path, args.dependencies, args.closure);
+                } else {
+                    context.ready({}, context.path, [], null);
+                }
+            }
 
             extend(defaults, {
                 "baseUrl": global.location.pathname,
+                "versionFilter": function (stack, path, version) {
+                    var val = stack[0];
+
+                    if (path === "jquery" && version) {
+                        val = null;
+
+                        each(stack, function () {
+                            if (lookup(this(), "jquery") === version) {
+                                val = this;
+
+                                return false;
+                            }
+                        });
+                    }
+
+                    return {
+                        val: val
+                    };
+                },
                 // Overridable - called when a module needs to be loaded
                 "fetch": function (config, path, ready) {
-                    var script = document.createElement("script");
+                    var script = document.createElement("script"),
+                        context = {
+                            config: config,
+                            path: path,
+                            ready: ready
+                        },
+                        time = 0;
 
-                    on(script, useOnLoad ? "load" : "readystatechange", function onLoad(evt) {
-                        var args;
+                    if (useOnLoad) {
+                        on(script, "load", function onLoad(evt) {
+                            var args = anonymouses.pop();
 
-                        if (evt.type === "load" || this.readyState === "loaded" || this.readyState === "complete") {
-                            args = anonymouses.pop();
+                            gotModule(context, args);
 
-                            if (args) {
-                                ready(extend({}, config, args.config), args.path || path, args.dependencies, args.closure);
-                            } else {
-                                ready({}, path, [], null);
-                            }
-
-                            off(script, useOnLoad ? "load" : "readystatechange", onLoad);
+                            off(script, "load", onLoad);
 
                             head.removeChild(script);
-                        }
-                    });
+                        });
+                    } else {
+                        put(script, "modularContext", context);
+
+                        on(script, "readystatechange", function checkLoaded() {
+                            if (/complete|loaded/.test(script.readyState)) {
+                                var context = lookup(script, "modularContext");
+
+                                if (context) {
+                                    if (time < 1000) {
+                                        time += 50;
+
+                                        global.setTimeout(checkLoaded, 50);
+                                    } else {
+                                        gotModule(context, null);
+                                        put(script, "modularContext", null);
+                                        activeScript = null;
+
+                                        off(script, "readystatechange", checkLoaded);
+                                    }
+                                }
+                            }
+                        });
+                    }
 
                     script.setAttribute("type", "text/javascript");
                     script.setAttribute("src", path);
 
+                    // IE in some cache states will execute script upon insertion
+                    activeScript = script;
                     head.insertBefore(script, head.firstChild);
+                    activeScript = null;
                 },
                 "anonymous": function (args) {
-                    anonymouses.push(args);
+                    var context;
+
+                    if (useOnLoad) {
+                        anonymouses.push(args);
+                    } else {
+                        if (!activeScript) {
+                            // Not in a special IE cache state: need to do more work
+                            each(scripts, function () {
+                                // Currently executing script will be "interactive"
+                                if (this.readyState === "interactive") {
+                                    activeScript = this;
+                                }
+                            });
+                        }
+
+                        context = lookup(activeScript, "modularContext");
+                        put(activeScript, "modularContext", null);
+                        activeScript = null;
+                        gotModule(context, args);
+                    }
                 }
             });
 
