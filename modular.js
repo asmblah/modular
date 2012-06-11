@@ -95,6 +95,11 @@
         return getType(str) === "Function";
     }
 
+    // For Closure compiler name-munging while keeping JSLint happy
+    function lookup(obj, name) {
+        return obj[name];
+    }
+
     function getBasePath(path) {
         path = path.replace(/[^\/]+$/, "");
 
@@ -215,11 +220,6 @@
         if (recheck) {
             pendings[path].push(recheck);
         }
-    }
-
-    // For Closure compiler name-munging while keeping JSLint happy
-    function lookup(obj, name) {
-        return obj[name];
     }
 
     function ready(config, path, dependencies, closure, options) {
