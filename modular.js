@@ -1,5 +1,5 @@
 /*
- *  Modular - JavaScript AMD framework
+ *  Modular - JavaScript AMD Framework
  *  Copyright (c) 2012 http://ovms.co. All Rights Reserved.
  *
  *  ====
