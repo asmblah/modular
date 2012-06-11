@@ -25,7 +25,7 @@
 (function () {
     "use strict";
 
-    var global = new Function("return this;")(),
+    var global = new [Function][0]("return this;")(), // Keep JSLint happy
         defaults = {
             "baseUrl": "",
             "paths": {},
