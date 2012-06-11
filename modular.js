@@ -29,6 +29,9 @@
         defaults = {
             "baseUrl": "",
             "paths": {},
+            "pathFilter": function (path) {
+                return path;
+            },
             "fetch": function (config, path, ready) {},
             "anonymous": function (args) {}
         },
@@ -110,11 +113,11 @@
         return path;
     }
 
-    function makePath(basePath, currentPath, path, pathMappings) {
+    function makePath(basePath, currentPath, path, config) {
         var previousPath = "",
-            components = path.split("/");
+            components = lookup(config, "pathFilter")(path).split("/");
 
-        each(pathMappings || {}, function (to, from) {
+        each(lookup(config, "paths") || {}, function (to, from) {
             if (components[0] === from) {
                 components[0] = to;
             }
@@ -249,7 +252,7 @@
                 var args = [];
 
                 each(dependencies, function (dependencyPath) {
-                    var fullPath = makePath(lookup(config, "baseUrl"), path, dependencyPath, lookup(config, "paths"));
+                    var fullPath = makePath(lookup(config, "baseUrl"), path, dependencyPath, config);
 
                     // Scoped require support
                     if (dependencyPath === "require") {
@@ -278,7 +281,7 @@
             var allResolved = true;
 
             each(dependencies, function (dependencyPath) {
-                var fullPath = makePath(lookup(config, "baseUrl"), path, dependencyPath, lookup(config, "paths"));
+                var fullPath = makePath(lookup(config, "baseUrl"), path, dependencyPath, config);
 
                 if (dependencyPath !== "require" && !findModule([dependencyPath, fullPath])) {
                     if (!fetched) {
