@@ -398,7 +398,7 @@
 
                 function pull() {
                     depend(implicitExtension(main), function (path) {
-                        defaults.fetch(path, ready);
+                        lookup(defaults, "fetch")({}, path, ready);
                     });
                 }
 
