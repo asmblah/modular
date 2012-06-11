@@ -86,8 +86,7 @@
             "anonymous": function (args) {}
         },
         pendings = {},
-        modules = {},
-        empty = {};
+        modules = {};
 
     function extend(target) {
         each([].slice.call(arguments, 1), function () {
