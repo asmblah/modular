@@ -351,7 +351,7 @@
                 } : function (node, type, callback) {
                     node.detachEvent("on" + type, callback);
                 },
-                useOnLoad = head.addEventListener,
+                useOnLoad = head.addEventListener && (!head.attachEvent || global.opera),
                 useDOMContentLoaded = {}.hasOwnProperty.call(global, "DOMContentLoaded"),
                 anonymouses = [];
 
@@ -373,9 +373,9 @@
                             } else {
                                 ready({}, path, [], null);
                             }
-                        }
 
-                        off(script, useOnLoad ? "load" : "readystatechange", onLoad);
+                            off(script, useOnLoad ? "load" : "readystatechange", onLoad);
+                        }
                     });
 
                     script.setAttribute("type", "text/javascript");
