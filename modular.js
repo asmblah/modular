@@ -117,7 +117,7 @@
         var previousPath = "",
             components = lookup(config, "pathFilter")(path).split("/");
 
-        each(lookup(config, "paths") || {}, function (to, from) {
+        each(lookup(config, "paths"), function (to, from) {
             if (components[0] === from) {
                 components[0] = to;
             }
