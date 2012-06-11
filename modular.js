@@ -99,6 +99,9 @@
     function lookup(obj, name) {
         return obj[name];
     }
+    function put(obj, name, val) {
+        obj[name] = val;
+    }
 
     function getBasePath(path) {
         path = path.replace(/[^\/]+$/, "");
@@ -369,6 +372,7 @@
                 },
                 useOnLoad = head.addEventListener && (!head.attachEvent || global.opera),
                 useDOMContentLoaded = {}.hasOwnProperty.call(global, "DOMContentLoaded"),
+                jQuery = lookup(global, "jQuery"),
                 anonymouses = [];
 
             extend(defaults, {
@@ -420,6 +424,10 @@
                     }
                 }
             });
+
+            if (!findModule(["jquery"]) && jQuery) {
+                put(modules, "jquery", jQuery);
+            }
         }());
     }
 }());
