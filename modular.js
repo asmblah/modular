@@ -229,27 +229,29 @@
             var moduleValue = null;
 
             function processDependents() {
-                var callbacks;
+                var callbacks,
+                    jQuery = lookup(global, "jQuery"),
+                    jQueryVersion = lookup(config, "jQuery");
 
                 // Caching may be explicitly disabled, eg. for scoped requires (which would otherwise
                 //  overwrite their container module)
                 if (options.cache !== false && (
                         // jQuery versioning support
-                        path !== "jquery" || !config.jQuery || !global.jQuery ||
-                        global.jQuery.fn.jquery === config.jQuery
+                        path !== "jquery" || !jQueryVersion || !jQuery ||
+                        lookup(jQuery(), "jquery") === jQueryVersion
                     )) {
 
                     modules[path] = moduleValue;
-                }
 
-                if (pendings[path]) {
-                    callbacks = pendings[path];
+                    if (pendings[path]) {
+                        callbacks = pendings[path];
 
-                    delete pendings[path];
+                        delete pendings[path];
 
-                    each(callbacks, function (dependencyLoaded) {
-                        dependencyLoaded();
-                    });
+                        each(callbacks, function (dependencyLoaded) {
+                            dependencyLoaded();
+                        });
+                    }
                 }
             }
 
