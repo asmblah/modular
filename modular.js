@@ -87,11 +87,7 @@
         },
         pendings = {},
         modules = {},
-        empty = {},
-        reservedDependencies = {
-            "require": true,
-            "exports": true
-        };
+        empty = {};
 
     function extend(target) {
         each([].slice.call(arguments, 1), function () {
