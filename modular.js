@@ -376,7 +376,8 @@
     // Browser environment support
     if (global.document) {
         (function (document) {
-            var head = document.getElementsByTagName("head")[0],
+            var scripts = document.getElementsByTagName("script"),
+                head = scripts[0].parentNode,
                 on = head.addEventListener ? function (node, type, callback) {
                     node.addEventListener(type, callback, false);
                 } : function (node, type, callback) {
@@ -424,7 +425,7 @@
                 }
             });
 
-            each(document.getElementsByTagName("script"), function () {
+            each(scripts, function () {
                 var main = this.getAttribute("data-main");
 
                 function pull() {
