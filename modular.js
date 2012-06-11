@@ -28,7 +28,8 @@
     var global = new Function("return this;")(),
         defaults = {
             "baseUrl": "",
-            "fetch": function (path, ready) {},
+            "paths": {},
+            "fetch": function (config, path, ready) {},
             "anonymous": function (args) {}
         },
         pendings = {},
@@ -213,6 +214,11 @@
         }
     }
 
+    // For Closure compiler name-munging while keeping JSLint happy
+    function lookup(obj, name) {
+        return obj[name];
+    }
+
     function ready(config, path, dependencies, closure, options) {
         var fetched = false;
 
@@ -243,7 +249,7 @@
                 var args = [];
 
                 each(dependencies, function (dependencyPath) {
-                    var fullPath = makePath(config.baseUrl, path, dependencyPath, config.paths);
+                    var fullPath = makePath(lookup(config, "baseUrl"), path, dependencyPath, lookup(config, "paths"));
 
                     // Scoped require support
                     if (dependencyPath === "require") {
@@ -272,12 +278,12 @@
             var allResolved = true;
 
             each(dependencies, function (dependencyPath) {
-                var fullPath = makePath(config.baseUrl, path, dependencyPath, config.paths);
+                var fullPath = makePath(lookup(config, "baseUrl"), path, dependencyPath, lookup(config, "paths"));
 
                 if (dependencyPath !== "require" && !findModule([dependencyPath, fullPath])) {
                     if (!fetched) {
                         depend(fullPath, function (path) {
-                            config.fetch(path, ready);
+                            lookup(config, "fetch")(config, path, ready);
                         }, checkDependencies);
                     }
 
@@ -300,7 +306,7 @@
     function require(arg1, arg2, arg3, arg4) {
         var args = parse(arg1, arg2, arg3, arg4);
 
-        ready(extend({}, defaults, args.config), args.path || args.config.baseUrl, args.dependencies, args.closure);
+        ready(extend({}, defaults, args.config), args.path || lookup(args.config, "baseUrl"), args.dependencies, args.closure);
     }
 
     function define(arg1, arg2, arg3, arg4) {
@@ -310,7 +316,7 @@
         if (args.path) {
             ready(config, args.path, args.dependencies, args.closure);
         } else {
-            config.anonymous(args);
+            lookup(config, "anonymous")(args);
         }
     }
 
@@ -358,9 +364,8 @@
             extend(defaults, {
                 "baseUrl": global.location.pathname,
                 // Overridable - called when a module needs to be loaded
-                "fetch": function (path, ready) {
-                    var script = global.document.createElement("script"),
-                        config = this;
+                "fetch": function (config, path, ready) {
+                    var script = global.document.createElement("script");
 
                     on(script, useOnLoad ? "load" : "readystatechange", function onLoad(evt) {
                         var args;
