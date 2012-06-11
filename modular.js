@@ -338,11 +338,15 @@
     });
 
     // Exports
-    extend(global, {
-        "require": require,
-        "requirejs": require,
-        "define": define
-    });
+    if (!lookup(global, "require")) {
+        extend(global, {
+            "require": require,
+            "define": define
+        });
+    }
+    if (!lookup(global, "requirejs")) {
+        put(global, "requirejs", require);
+    }
 
     // Browser environment support
     if (global.document) {
