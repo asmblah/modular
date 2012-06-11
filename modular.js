@@ -339,7 +339,7 @@
 
     // Browser environment support
     if (global.document) {
-        extend(defaults, (function () {
+        (function () {
             var head = global.document.getElementsByTagName("head")[0],
                 on = head.addEventListener ? function (node, type, callback) {
                     node.addEventListener(type, callback, false);
@@ -352,9 +352,10 @@
                     node.detachEvent("on" + type, callback);
                 },
                 useOnLoad = head.addEventListener,
+                useDOMContentLoaded = {}.hasOwnProperty.call(global, "DOMContentLoaded"),
                 anonymouses = [];
 
-            return {
+            extend(defaults, {
                 "baseUrl": global.location.pathname,
                 // Overridable - called when a module needs to be loaded
                 "fetch": function (path, ready) {
@@ -385,17 +386,25 @@
                 "anonymous": function (args) {
                     anonymouses.push(args);
                 }
-            };
-        }()));
+            });
 
-        each(global.document.getElementsByTagName("script"), function () {
-            var main = this.getAttribute("data-main");
+            each(global.document.getElementsByTagName("script"), function () {
+                var main = this.getAttribute("data-main");
 
-            if (main) {
-                depend(implicitExtension(main), function (path) {
-                    defaults.fetch(path, ready);
-                });
-            }
-        });
+                function pull() {
+                    depend(implicitExtension(main), function (path) {
+                        defaults.fetch(path, ready);
+                    });
+                }
+
+                if (main) {
+                    if (this.getAttribute("data-defer") === "yes") {
+                        on(global, useDOMContentLoaded ? "DOMContentLoaded" : "load", pull);
+                    } else {
+                        pull();
+                    }
+                }
+            });
+        }());
     }
 }());
