@@ -89,7 +89,12 @@
         },
         pendings = {},
         modules = {},
-        empty = {};
+        empty = {},
+        reservedDependencies = {
+            "require": true,
+            "exports": true,
+            "module": true
+        };
 
     function extend(target) {
         each([].slice.call(arguments, 1), function () {
@@ -268,7 +273,8 @@
             }
 
             function evaluateModule() {
-                var args = [];
+                var args = [],
+                    moduleValue = null;
 
                 each(dependencies, function (dependencyPath) {
                     var fullPath = makePath(lookup(config, "baseUrl"), path, dependencyPath, config);
@@ -282,12 +288,15 @@
                                 cache: false
                             });
                         });
+                    // Exports support
+                    } else if (dependencyPath === "exports") {
+                        moduleValue = {};
                     } else {
                         args.push((getModule(dependencyPath, config) || getModule(fullPath, config)).val);
                     }
                 });
 
-                return isFunction(closure) ? closure.apply(global, args) : closure;
+                return (isFunction(closure) ? closure.apply(global, args) : closure) || moduleValue;
             }
 
             moduleValue = evaluateModule();
@@ -302,7 +311,7 @@
             each(dependencies, function (dependencyPath) {
                 var fullPath = makePath(lookup(config, "baseUrl"), path, dependencyPath, config);
 
-                if (dependencyPath !== "require" && !getModule(dependencyPath, config) && !getModule(fullPath, config)) {
+                if (!reservedDependencies[dependencyPath] && !getModule(dependencyPath, config) && !getModule(fullPath, config)) {
                     if (!fetched) {
                         depend(fullPath, function (path) {
                             lookup(config, "fetch")(config, path, ready);
