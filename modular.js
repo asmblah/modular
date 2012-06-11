@@ -246,83 +246,71 @@
     function ready(config, path, dependencies, closure, options) {
         var fetched = false;
 
-        function allDependenciesLoaded() {
-            var moduleValue;
+        function processDependents(moduleValue) {
+            var callbacks;
 
-            function processDependents() {
-                var callbacks;
+            // Caching may be explicitly disabled, eg. for scoped requires (which would otherwise
+            //  overwrite their container module)
+            if (options.cache !== false) {
+                addModule(path, moduleValue);
 
-                // Caching may be explicitly disabled, eg. for scoped requires (which would otherwise
-                //  overwrite their container module)
-                if (options.cache !== false) {
-                    addModule(path, moduleValue);
+                if (pendings[path]) {
+                    callbacks = pendings[path];
 
-                    if (pendings[path]) {
-                        callbacks = pendings[path];
+                    delete pendings[path];
 
-                        delete pendings[path];
-
-                        each(callbacks, function (dependencyLoaded) {
-                            dependencyLoaded();
-                        });
-                    }
+                    each(callbacks, function (dependencyLoaded) {
+                        dependencyLoaded();
+                    });
                 }
             }
-
-            function evaluateModule() {
-                var args = [],
-                    moduleValue = null;
-
-                each(dependencies, function (dependencyPath) {
-                    var fullPath = makePath(lookup(config, "baseUrl"), path, dependencyPath, config);
-
-                    // Scoped require support
-                    if (dependencyPath === "require") {
-                        args.push(function (arg1, arg2, arg3, arg4) {
-                            var args = parse(arg1, arg2, arg3, arg4);
-
-                            ready(extend({}, config, args.config), args.path || path, args.dependencies, args.closure, {
-                                cache: false
-                            });
-                        });
-                    // Exports support
-                    } else if (dependencyPath === "exports") {
-                        moduleValue = {};
-                    } else {
-                        args.push((getModule(dependencyPath, config) || getModule(fullPath, config)).val);
-                    }
-                });
-
-                return (isFunction(closure) ? closure.apply(global, args) : closure) || moduleValue;
-            }
-
-            moduleValue = evaluateModule();
-
-            // Modules may have no path (eg. an anonymous require(...))
-            processDependents();
         }
 
         function checkDependencies() {
-            var allResolved = true;
+            var allResolved = true,
+                moduleValue = null,
+                args = [];
 
             each(dependencies, function (dependencyPath) {
-                var fullPath = makePath(lookup(config, "baseUrl"), path, dependencyPath, config);
+                var fullPath = makePath(lookup(config, "baseUrl"), path, dependencyPath, config),
+                    result;
 
-                if (!reservedDependencies[dependencyPath] && !getModule(dependencyPath, config) && !getModule(fullPath, config)) {
-                    if (!fetched) {
-                        depend(fullPath, function (path) {
-                            lookup(config, "fetch")(config, path, ready);
-                        }, checkDependencies);
+                // Scoped require support
+                if (dependencyPath === "require") {
+                    args.push(function (arg1, arg2, arg3, arg4) {
+                        var args = parse(arg1, arg2, arg3, arg4);
+
+                        ready(extend({}, config, args.config), args.path || path, args.dependencies, args.closure, {
+                            cache: false
+                        });
+                    });
+                // Exports support
+                } else if (dependencyPath === "exports") {
+                    moduleValue = {};
+                    args.push(moduleValue);
+                } else {
+                    result = getModule(dependencyPath, config) || getModule(fullPath, config);
+
+                    if (result) {
+                        args.push(result.val);
+                    } else {
+                        if (!fetched) {
+                            depend(fullPath, function (path) {
+                                lookup(config, "fetch")(config, path, ready);
+                            }, checkDependencies);
+                        }
+
+                        allResolved = false;
                     }
-
-                    allResolved = false;
                 }
             });
 
             fetched = true;
 
             if (allResolved) {
-                allDependenciesLoaded();
+                moduleValue = (isFunction(closure) ? closure.apply(global, args) : closure) || moduleValue;
+
+                processDependents(moduleValue);
             }
         }
 
