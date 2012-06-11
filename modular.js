@@ -233,7 +233,12 @@
 
                 // Caching may be explicitly disabled, eg. for scoped requires (which would otherwise
                 //  overwrite their container module)
-                if (options.cache !== false) {
+                if (options.cache !== false && (
+                        // jQuery versioning support
+                        path !== "jquery" || !config.jQuery || !global.jQuery ||
+                        global.jQuery.fn.jquery === config.jQuery
+                    )) {
+
                     modules[path] = moduleValue;
                 }
 
