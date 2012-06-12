@@ -305,10 +305,21 @@
         checkDependencies();
     }
 
+    function makeRequire(parentConfig) {
+        return function (arg1, arg2, arg3, arg4) {
+            var args = parse(arg1, arg2, arg3, arg4),
+                config = extend({}, parentConfig, args.config);
+
+            return require(config, args.path, args.dependencies, args.closure);
+        };
+    }
+
     function require(arg1, arg2, arg3, arg4) {
         var args = parse(arg1, arg2, arg3, arg4);
 
         ready(extend({}, defaults, args.config), args.path || lookup(args.config, "baseUrl"), args.dependencies, args.closure);
+
+        return makeRequire(args.config);
     }
 
     function define(arg1, arg2, arg3, arg4) {
@@ -320,11 +331,13 @@
         } else {
             lookup(config, "anonymous")(args);
         }
+
+        return makeRequire(args.config);
     }
 
     extend(require, {
         "config": function (config) {
-            extend(defaults, config);
+            return makeRequire(config);
         },
         "onError": function (msg) {
             throw new Error(msg);
