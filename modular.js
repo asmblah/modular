@@ -497,18 +497,10 @@
             each(scripts, function () {
                 var main = this.getAttribute("data-main");
 
-                function pull() {
+                if (main) {
                     depend(implicitExtension(main), function (path) {
                         lookup(defaults, "fetch")({}, path, ready);
                     });
-                }
-
-                if (main) {
-                    if (this.getAttribute("data-defer") === "yes") {
-                        on(global, useDOMContentLoaded ? "DOMContentLoaded" : "load", pull);
-                    } else {
-                        pull();
-                    }
                 }
             });
 
