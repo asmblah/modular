@@ -43,7 +43,8 @@
         },
         pendings = {},
         modules = {},
-        has = {}.hasOwnProperty;
+        has = {}.hasOwnProperty,
+        slice = [].slice;
 
     function each(obj, callback) {
         var key,
@@ -79,7 +80,7 @@
     }
 
     function extend(target) {
-        each([].slice.call(arguments, 1), function () {
+        each(slice.call(arguments, 1), function () {
             each(this, function (val, key) {
                 target[key] = val;
             });
@@ -353,22 +354,24 @@
         (function (document) {
             var scripts = document.getElementsByTagName("script"),
                 head = scripts[0].parentNode,
-                one = head.addEventListener ? function (node, type, callback) {
-                    node.addEventListener(type, function handler(evt) {
-                        callback.call(node, evt);
-                        node.removeEventListener(type, handler, false);
-                    }, false);
+                on = head.addEventListener ? function (node, type, callback) {
+                    node.addEventListener(type, callback, false);
                 } : function (node, type, callback) {
-                    node.attachEvent(type, function handler(evt) {
-                        callback.call(node, evt);
-                        node.detachEvent("on" + type, handler);
-                    });
+                    node.attachEvent("on" + type, callback);
+                },
+                off = head.removeEventListener ? function (node, type, callback) {
+                    node.removeEventListener(type, callback, false);
+                } : function (node, type, callback) {
+                    node.detachEvent("on" + type, callback);
                 },
                 useOnLoad = head.addEventListener && (!head.attachEvent || global.opera),
+                type = useOnLoad ? "load" : "readystatechange",
                 useDOMContentLoaded = has.call(global, "DOMContentLoaded"),
                 jQuery = lookup(global, "jQuery"),
                 anonymouses = [],
-                activeScript = null;
+                fetchScripts = {},
+                activeScript = null,
+                contextProperty = "__modularContext";
 
             function gotModule(context, args) {
                 if (args) {
@@ -376,6 +379,8 @@
                 } else {
                     context.ready({}, context.path, [], null);
                 }
+
+                head.removeChild(context.script);
             }
 
             extend(defaults, {
@@ -405,38 +410,43 @@
                         context = {
                             config: config,
                             path: path,
-                            ready: ready
+                            ready: ready,
+                            script: script
                         },
                         time = 0;
 
                     if (!useOnLoad) {
-                        put(script, "modularContext", context);
+                        put(script, contextProperty, context);
                     }
 
-                    one(script, useOnLoad ? "load" : "readystatechange", function checkLoaded() {
+                    on(script, type, function checkLoaded() {
                         var args;
 
                         if (useOnLoad) {
+                            off(script, type, checkLoaded);
+
                             args = anonymouses.pop();
 
                             gotModule(context, args);
-                        } else if (/complete|loaded/.test(script.readyState) && lookup(script, "modularContext")) {
+                        } else if (/complete|loaded/.test(script.readyState) && lookup(script, contextProperty)) {
                             if (time < 1000) {
                                 time += 50;
 
                                 global.setTimeout(checkLoaded, 50);
                             } else {
+                                off(script, type, checkLoaded);
+
                                 gotModule(context, null);
-                                put(script, "modularContext", null);
+                                put(script, contextProperty, null);
                                 activeScript = null;
                             }
                         }
-
-                        head.removeChild(script);
                     });
 
                     script.setAttribute("type", "text/javascript");
                     script.setAttribute("src", path);
+
+                    fetchScripts[path] = script;
 
                     // IE in some cache states will execute script upon insertion
                     activeScript = script;
@@ -451,7 +461,7 @@
                     } else {
                         if (!activeScript) {
                             // Not in a special IE cache state: need to do more work
-                            each(scripts, function () {
+                            each(fetchScripts, function () {
                                 // Currently executing script will be "interactive"
                                 if (this.readyState === "interactive") {
                                     activeScript = this;
@@ -459,9 +469,13 @@
                             });
                         }
 
-                        context = lookup(activeScript, "modularContext");
-                        put(activeScript, "modularContext", null);
+                        // Pull out context & remove from element to avoid memory leak
+                        context = lookup(activeScript, contextProperty);
+                        put(activeScript, contextProperty, null);
+
                         activeScript = null;
+                        delete fetchScripts[context.path];
+
                         gotModule(context, args);
                     }
                 }
@@ -478,7 +492,7 @@
 
                 if (main) {
                     if (this.getAttribute("data-defer") === "yes") {
-                        one(global, useDOMContentLoaded ? "DOMContentLoaded" : "load", pull);
+                        on(global, useDOMContentLoaded ? "DOMContentLoaded" : "load", pull);
                     } else {
                         pull();
                     }
