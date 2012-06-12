@@ -353,15 +353,16 @@
         (function (document) {
             var scripts = document.getElementsByTagName("script"),
                 head = scripts[0].parentNode,
-                on = head.addEventListener ? function (node, type, callback) {
-                    node.addEventListener(type, callback, false);
+                one = head.addEventListener ? function (node, type, callback) {
+                    node.addEventListener(type, function handler(evt) {
+                        callback.call(node, evt);
+                        node.removeEventListener(type, handler, false);
+                    }, false);
                 } : function (node, type, callback) {
-                    node.attachEvent("on" + type, callback);
-                },
-                off = head.removeEventListener ? function (node, type, callback) {
-                    node.removeEventListener(type, callback, false);
-                } : function (node, type, callback) {
-                    node.detachEvent("on" + type, callback);
+                    node.attachEvent(type, function handler(evt) {
+                        callback.call(node, evt);
+                        node.detachEvent("on" + type, handler);
+                    });
                 },
                 useOnLoad = head.addEventListener && (!head.attachEvent || global.opera),
                 useDOMContentLoaded = has.call(global, "DOMContentLoaded"),
@@ -408,39 +409,31 @@
                         },
                         time = 0;
 
-                    if (useOnLoad) {
-                        on(script, "load", function onLoad(evt) {
-                            var args = anonymouses.pop();
+                    if (!useOnLoad) {
+                        put(script, "modularContext", context);
+                    }
+
+                    one(script, useOnLoad ? "load" : "readystatechange", function checkLoaded() {
+                        var args;
+
+                        if (useOnLoad) {
+                            args = anonymouses.pop();
 
                             gotModule(context, args);
+                        } else if (/complete|loaded/.test(script.readyState) && lookup(script, "modularContext")) {
+                            if (time < 1000) {
+                                time += 50;
 
-                            off(script, "load", onLoad);
-
-                            head.removeChild(script);
-                        });
-                    } else {
-                        put(script, "modularContext", context);
-
-                        on(script, "readystatechange", function checkLoaded() {
-                            if (/complete|loaded/.test(script.readyState)) {
-                                var context = lookup(script, "modularContext");
-
-                                if (context) {
-                                    if (time < 1000) {
-                                        time += 50;
-
-                                        global.setTimeout(checkLoaded, 50);
-                                    } else {
-                                        gotModule(context, null);
-                                        put(script, "modularContext", null);
-                                        activeScript = null;
-
-                                        off(script, "readystatechange", checkLoaded);
-                                    }
-                                }
+                                global.setTimeout(checkLoaded, 50);
+                            } else {
+                                gotModule(context, null);
+                                put(script, "modularContext", null);
+                                activeScript = null;
                             }
-                        });
-                    }
+                        }
+
+                        head.removeChild(script);
+                    });
 
                     script.setAttribute("type", "text/javascript");
                     script.setAttribute("src", path);
@@ -485,7 +478,7 @@
 
                 if (main) {
                     if (this.getAttribute("data-defer") === "yes") {
-                        on(global, useDOMContentLoaded ? "DOMContentLoaded" : "load", pull);
+                        one(global, useDOMContentLoaded ? "DOMContentLoaded" : "load", pull);
                     } else {
                         pull();
                     }
