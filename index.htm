@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Modular Demo</title>
+
+        <script type="text/javascript" src="modular.js"></script>
+        <script type="text/javascript" src="libs/jquery/jquery-1.7.1.min.js"></script>
+        <script type="text/javascript" src="libs/json/json2.min.js"></script>
+
+        <script type="text/javascript">
+            if (!Object.create) {
+                Object.create = function (obj) {
+                    function F() {}
+                    F.prototype = obj;
+                    return new F();
+                };
+            }
+
+            require({
+                baseUrl: "../",
+                pathFilter: function (path) {
+                    return (path.substr(0, 7) === "Rocket.") ? "js/Rocket/" + path.split(".").slice(1).join("/") : path;
+                },
+                versions: {
+                    //"jquery": "1.7.1"
+                }
+            }, [
+                "js/util",
+                "js/classes/Person",
+                "js/data/tables",
+                "Rocket.UI.Module",
+                "jquery"
+            ], function (
+                util,
+                Person,
+                tables,
+                Module,
+                $
+            ) {
+                document.body.appendChild(document.createTextNode(JSON.stringify(util)));
+                document.body.appendChild(document.createTextNode(Person.toString()));
+                document.body.appendChild(document.createTextNode(JSON.stringify(tables)));
+                document.body.appendChild(document.createTextNode(Module.toString()));
+                document.body.appendChild(document.createTextNode("jQuery = " + $));
+            });
+        </script>
+    </head>
+
+    <body>
+        <!--<h1>Tests for Launchpad</h1>-->
+    </body>
+</html>
