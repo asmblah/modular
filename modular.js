@@ -367,34 +367,11 @@
         (function (document) {
             var scripts = document.getElementsByTagName("script"),
                 head = scripts[0].parentNode,
-                on = head.addEventListener ? function (node, type, callback) {
-                    node.addEventListener(type, callback, false);
-                } : function (node, type, callback) {
-                    node.attachEvent("on" + type, callback);
+                createXHR = function () {
+                    return new (global.XMLHttpRequest || global.ActiveXObject)("Microsoft.XMLHTTP");
                 },
-                off = head.removeEventListener ? function (node, type, callback) {
-                    node.removeEventListener(type, callback, false);
-                } : function (node, type, callback) {
-                    node.detachEvent("on" + type, callback);
-                },
-                useOnLoad = head.addEventListener && (!head.attachEvent || global.opera),
-                type = useOnLoad ? "load" : "readystatechange",
-                useDOMContentLoaded = has.call(global, "DOMContentLoaded"),
-                jQuery = lookup(global, "jQuery"),
                 anonymouses = [],
-                fetchScripts = {},
-                activeScript = null,
-                contextProperty = "__modularContext";
-
-            function gotModule(context, args) {
-                if (args) {
-                    context.ready(extend({}, context.config, args.config), args.path || context.path, args.dependencies, args.closure);
-                } else {
-                    context.ready({}, context.path, [], null);
-                }
-
-                head.removeChild(context.script);
-            }
+                jQuery = lookup(global, "jQuery");
 
             extend(defaults, {
                 "baseUrl": global.location.pathname,
@@ -419,78 +396,38 @@
                 },
                 // Overridable - called when a module needs to be loaded
                 "fetch": function (config, path, ready) {
-                    var script = document.createElement("script"),
-                        context = {
-                            config: config,
-                            path: path,
-                            ready: ready,
-                            script: script
-                        },
-                        time = 0;
+                    var xhr = createXHR();
 
-                    if (!useOnLoad) {
-                        put(script, contextProperty, context);
-                    }
+                    xhr.open("GET", path, true);
+                    xhr.onreadystatechange = function () {
+                        var script,
+                            args = null;
 
-                    on(script, type, function checkLoaded() {
-                        var args;
+                        if (this.readyState === 4) {
+                            if (this.status === 200) {
+                                // Must create a new element each time
+                                script = document.createElement("script");
 
-                        if (useOnLoad) {
-                            off(script, type, checkLoaded);
+                                head.insertBefore(script, head.firstChild);
+                                script.text = this.responseText;
+                                head.removeChild(script);
 
-                            args = anonymouses.pop();
-
-                            gotModule(context, args);
-                        } else if (/complete|loaded/.test(script.readyState) && lookup(script, contextProperty)) {
-                            if (time < 1000) {
-                                time += 50;
-
-                                global.setTimeout(checkLoaded, 50);
+                                args = anonymouses.pop();
                             } else {
-                                off(script, type, checkLoaded);
+                                // TODO: error callback
+                            }
 
-                                gotModule(context, null);
-                                put(script, contextProperty, null);
-                                activeScript = null;
+                            if (args) {
+                                ready(extend({}, config, args.config), args.path || path, args.dependencies, args.closure);
+                            } else {
+                                ready({}, path, [], null);
                             }
                         }
-                    });
-
-                    script.setAttribute("type", "text/javascript");
-                    script.setAttribute("src", path);
-
-                    fetchScripts[path] = script;
-
-                    // IE in some cache states will execute script upon insertion
-                    activeScript = script;
-                    head.insertBefore(script, head.firstChild);
-                    activeScript = null;
+                    };
+                    xhr.send();
                 },
                 "anonymous": function (args) {
-                    var context;
-
-                    if (useOnLoad) {
-                        anonymouses.push(args);
-                    } else {
-                        if (!activeScript) {
-                            // Not in a special IE cache state: need to do more work
-                            each(fetchScripts, function () {
-                                // Currently executing script will be "interactive"
-                                if (this.readyState === "interactive") {
-                                    activeScript = this;
-                                }
-                            });
-                        }
-
-                        // Pull out context & remove from element to avoid memory leak
-                        context = lookup(activeScript, contextProperty);
-                        put(activeScript, contextProperty, null);
-
-                        activeScript = null;
-                        delete fetchScripts[context.path];
-
-                        gotModule(context, args);
-                    }
+                    anonymouses.push(args);
                 }
             });
 
