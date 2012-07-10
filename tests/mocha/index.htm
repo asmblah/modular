@@ -17,6 +17,14 @@
                 "reporter": mocha.reporters.HTML,
                 "globals": ["_gaq", "jQuery*"]
             });
+
+            if (!Object.create) {
+                Object.create = function (obj) {
+                    function F() {}
+                    F.prototype = obj;
+                    return new F();
+                };
+            }
         </script>
 
         <script type="text/javascript" src="../../modular.js" data-main="js/main"></script>
