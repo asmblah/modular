@@ -25,7 +25,8 @@
 (function () {
     "use strict";
 
-    var global = new [Function][0]("return this;")(), // Keep JSLint happy
+    var ROOT_REGEX = /^\//,
+        global = new [Function][0]("return this;")(), // Keep JSLint happy
         defaults = {
             "baseUrl": "",
             "paths": {},
@@ -129,17 +130,21 @@
 
     function makePath(basePath, currentPath, path, config) {
         var previousPath = "",
+            components;
+
+        if (!ROOT_REGEX.test(path)) {
             components = lookup(config, "pathFilter")(path).split("/");
 
-        each(lookup(config, "paths"), function (to, from) {
-            if (components[0] === from) {
-                components[0] = to;
-            }
-        });
+            each(lookup(config, "paths"), function (to, from) {
+                if (components[0] === from) {
+                    components[0] = to;
+                }
+            });
 
-        path = components.join("/");
+            path = components.join("/");
+        }
 
-        path = getBasePath(/^\.\.?\//.test(path) ? currentPath : basePath) + path;
+        path = getBasePath(/^\.\.?\//.test(path) ? currentPath : basePath) + path.replace(ROOT_REGEX, "");
 
         path = path.replace(/\/\.\//g, "/"); // Resolve same-directory symbols
 
@@ -149,7 +154,7 @@
             path = path.replace(/[^\/]*\/\.\.\//, "");
         }
 
-        return implicitExtension(path);
+        return path;
     }
 
     function parse(arg1, arg2, arg3, arg4) {
@@ -315,11 +320,12 @@
     }
 
     function require(arg1, arg2, arg3, arg4) {
-        var args = parse(arg1, arg2, arg3, arg4);
+        var args = parse(arg1, arg2, arg3, arg4),
+            config = extend({}, defaults, args.config);
 
-        ready(extend({}, defaults, args.config), args.path || lookup(args.config, "baseUrl"), args.dependencies, args.closure);
+        ready(config, args.path || lookup(config, "baseUrl"), args.dependencies, args.closure);
 
-        return makeRequire(args.config);
+        return makeRequire(config);
     }
 
     function define(arg1, arg2, arg3, arg4) {
@@ -457,7 +463,7 @@
                     });
 
                     script.setAttribute("type", "text/javascript");
-                    script.setAttribute("src", path);
+                    script.setAttribute("src", implicitExtension(path));
 
                     fetchScripts[path] = script;
 
@@ -498,7 +504,7 @@
                 var main = this.getAttribute("data-main");
 
                 if (main) {
-                    depend(implicitExtension(main), function (path) {
+                    depend(main, function (path) {
                         lookup(defaults, "fetch")({}, path, ready);
                     });
                 }
