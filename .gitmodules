@@ -1,6 +1,6 @@
 [submodule "lib/mocha"]
 	path = lib/mocha
-	url = https://github.com/asmblah/mocha.git
+	url = git://github.com/asmblah/mocha.git
 [submodule "lib/chai"]
 	path = lib/chai
-	url = https://github.com/chaijs/chai.git
+	url = git://github.com/chaijs/chai.git
