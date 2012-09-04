@@ -343,7 +343,14 @@
 
     extend(require, {
         "config": function (config) {
-            return makeRequire(config);
+            if (config) {
+                // Extend the global config with the specified one
+                extend(defaults, config);
+
+                return makeRequire(defaults);
+            } else {
+                return defaults;
+            }
         },
         "onError": function (msg) {
             throw new Error(msg);

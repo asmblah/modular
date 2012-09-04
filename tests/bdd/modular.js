@@ -3,6 +3,8 @@ define([
 ], function (
     chai
 ) {
+    var expect = chai.expect;
+
     describe("Modular", function () {
         define("classes/Animal", function () {
             function Animal(species) {
@@ -101,6 +103,16 @@ define([
             it("should allow itself to be named (only useful for requires outside define(...)s or data-main)", function (done) {
                 require("i-am-the-one-and-only", function () {
                     done();
+                });
+            });
+
+            describe("config", function () {
+                it("should affect the global config", function () {
+                    require.config({
+                        awesomeOption: "yes"
+                    });
+
+                    expect(require.config()).to.have.property("awesomeOption");
                 });
             });
         });
