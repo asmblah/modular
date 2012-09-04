@@ -136,13 +136,25 @@ define([
         });
 
         describe("nested require(...)", function () {
-            it("should resolve paths relative to enclosing module", function () {
-                require("test.js", [
-                    "classes/Human"
+            it("should resolve paths relative to enclosing module", function (done) {
+                define("into/the/Matrix", function () {
+                    function Matrix() {}
+
+                    return Matrix;
+                });
+
+                require("into/the/somewhere", [
+                    "require"
                 ], function (
-                    Human
+                    require
                 ) {
-                    expect(new Human().getSpecies()).to.equal("Human");
+                    require([
+                        "./Matrix"
+                    ], function (
+                        Matrix
+                    ) {
+                        done();
+                    });
                 });
             });
         });
