@@ -32,11 +32,11 @@ define([
         });
 
         it("should publish support for the AMD pattern", function () {
-            chai.assert.ok(define.amd);
+            expect(define.amd).to.be.ok;
         });
 
         it("should publish special jQuery AMD support", function () {
-            chai.assert.deepEqual(define.amd, {
+            expect(define.amd).to.eql({
                 jQuery: true
             });
         });
@@ -47,7 +47,7 @@ define([
             ], function (
                 Animal
             ) {
-                chai.assert.isNull(new Animal().getSpecies());
+                expect(new Animal().getSpecies()).to.be.Null;
 
                 done();
             });
@@ -59,7 +59,7 @@ define([
             ], function (
                 Animal
             ) {
-                chai.assert.isNull(new Animal().getSpecies());
+                expect(new Animal().getSpecies()).to.be.Null;
 
                 done();
             });
@@ -75,7 +75,7 @@ define([
             ], function (
                 util
             ) {
-                chai.assert.deepEqual(util, {});
+                expect(util).to.eql({});
 
                 done();
             });
@@ -87,7 +87,7 @@ define([
             ], function (
                 Human
             ) {
-                chai.assert.equal(new Human().getSpecies(), "Human");
+                expect(new Human().getSpecies()).to.equal("Human");
 
                 done();
             });
@@ -126,7 +126,7 @@ define([
                 });
 
                 require(["annie's-marvellous-module"], function (greeting) {
-                    chai.assert.deepEqual(greeting, {
+                    expect(greeting).to.eql({
                         welcome: "to the jungle"
                     });
 
@@ -142,7 +142,7 @@ define([
                 ], function (
                     Human
                 ) {
-                    chai.assert.equal(new Human().getSpecies(), "Human");
+                    expect(new Human().getSpecies()).to.equal("Human");
                 });
             });
         });
