@@ -1,5 +1,5 @@
 define(function () {
-    suite("Modular", function () {
+    describe("Modular", function () {
         define("classes/Animal", function () {
             function Animal(species) {
                 this.species = species || null;
@@ -25,17 +25,17 @@ define(function () {
             return Human;
         });
 
-        test("publishes support for the AMD pattern", function () {
+        it("should publish support for the AMD pattern", function () {
             chai.assert.ok(define.amd);
         });
 
-        test("publishes special jQuery AMD support", function () {
+        it("should publish special jQuery AMD support", function () {
             chai.assert.deepEqual(define.amd, {
                 jQuery: true
             });
         });
 
-        test("paths beginning with './' are resolved relative to current directory", function (done) {
+        it("should resolve paths beginning with './' relative to current directory", function (done) {
             require("classes/World", [
                 "./Animal"
             ], function (
@@ -47,7 +47,7 @@ define(function () {
             });
         });
 
-        test("paths beginning with '../' are resolved relative to parent directory", function (done) {
+        it("should resolve paths beginning with '../' relative to parent directory", function (done) {
             require("classes/World", [
                 "../classes/Animal"
             ], function (
@@ -59,7 +59,7 @@ define(function () {
             });
         });
 
-        test("paths beginning with '/' are resolved relative to root", function (done) {
+        it("should resolve paths beginning with '/' relative to root", function (done) {
             define("/util", function () {
                 return {};
             });
@@ -75,7 +75,7 @@ define(function () {
             });
         });
 
-        test("paths not beginning with '.' or '/' are resolved relative to root", function (done) {
+        it("should resolve paths not beginning with '.' or '/' relative to root", function (done) {
             require("classes/Parser/English", [
                 "classes/Human"
             ], function (
@@ -87,22 +87,22 @@ define(function () {
             });
         });
 
-        suite("require(...)", function () {
-            test("allows no dependencies to be specified", function (done) {
+        describe("require(...)", function () {
+            it("should allow no dependencies to be specified", function (done) {
                 require(function () {
                     done();
                 });
             });
 
-            test("allows itself to be named (only useful for requires outside define(...)s or data-main)", function (done) {
+            it("should allow itself to be named (only useful for requires outside define(...)s or data-main)", function (done) {
                 require("i-am-the-one-and-only", function () {
                     done();
                 });
             });
         });
 
-        suite("define(...)", function () {
-            test("supports marvellously named modules", function (done) {
+        describe("define(...)", function () {
+            it("should support marvellously named modules", function (done) {
                 define("annie's-marvellous-module", function () {
                     return {
                         welcome: "to the jungle"
@@ -119,8 +119,8 @@ define(function () {
             });
         });
 
-        suite("nested require(...)", function () {
-            test("paths are resolved relative to enclosing module", function () {
+        describe("nested require(...)", function () {
+            it("should resolve paths relative to enclosing module", function () {
                 require("test.js", [
                     "classes/Human"
                 ], function (
@@ -131,7 +131,7 @@ define(function () {
             });
         });
 
-        suite("pathFilter", function () {
+        describe("pathFilter", function () {
             // TODO: Improve pathFilter so it can remember absolute mappings (so relative mappings work as expected)
         });
     });

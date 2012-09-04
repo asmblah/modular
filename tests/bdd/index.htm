@@ -1,0 +1,25 @@
+<!DOCTYPE HTML>
+<html lang="en-GB">
+    <head>
+        <meta charset="UTF-8" />
+
+        <title>Modular - A simple AMD loader</title>
+
+        <link rel="stylesheet" href="../../vendor/mocha/mocha.css" />
+        <script type="text/javascript" src="../../vendor/modular/modular.js"></script>
+        <script type="text/javascript" src="../../vendor/mocha/mocha.js"></script>
+    </head>
+    <body>
+        <div id="mocha"></div>
+
+        <script type="text/javascript">
+            mocha.setup({
+                "ui": "bdd",
+                "reporter": mocha.reporters.HTML,
+                "globals": ["_gaq", "jQuery*", "setTimeout", "setInterval", "clearTimeout", "clearInterval"]
+            });
+        </script>
+
+        <script type="text/javascript" src="main.js"></script>
+    </body>
+</html>

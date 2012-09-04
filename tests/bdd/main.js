@@ -1,5 +1,5 @@
 require([
-    "./js/modular.js",
+    "./modular.js",
 ], function () {
     mocha.run();
 });
