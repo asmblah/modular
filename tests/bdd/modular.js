@@ -1,4 +1,8 @@
-define(function () {
+define([
+    "vendor/chai/chai"
+], function (
+    chai
+) {
     describe("Modular", function () {
         define("classes/Animal", function () {
             function Animal(species) {
