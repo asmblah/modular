@@ -6,29 +6,32 @@ define([
     var expect = chai.expect;
 
     describe("Modular", function () {
-        define("classes/Animal", function () {
-            function Animal(species) {
-                this.species = species || null;
-            }
+        before(function () {
+            define("classes/Animal", function () {
+                function Animal(species) {
+                    this.species = species || null;
+                }
 
-            Animal.prototype.getSpecies = function () {
-                return this.species;
-            };
+                Animal.prototype.getSpecies = function () {
+                    return this.species;
+                };
 
-            return Animal;
-        });
-        define("classes/Human", [
-            "classes/Animal"
-        ], function (
-            Animal
-        ) {
-            function Human() {
-                Animal.call(this, "Human");
-            }
+                return Animal;
+            });
 
-            Human.prototype = Object.create(Animal.prototype);
+            define("classes/Human", [
+                "classes/Animal"
+            ], function (
+                Animal
+            ) {
+                function Human() {
+                    Animal.call(this, "Human");
+                }
 
-            return Human;
+                Human.prototype = Object.create(Animal.prototype);
+
+                return Human;
+            });
         });
 
         it("should publish support for the AMD pattern", function () {
