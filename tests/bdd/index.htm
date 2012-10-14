@@ -3,23 +3,14 @@
     <head>
         <meta charset="UTF-8" />
 
-        <title>Modular - A simple AMD loader</title>
+        <title>Modular - a simple AMD loader for JavaScript</title>
 
         <link rel="stylesheet" href="../../vendor/mocha/mocha.css" />
-        <script type="text/javascript" src="../../modular.js"></script>
         <script type="text/javascript" src="../../vendor/mocha/mocha.js"></script>
     </head>
     <body>
         <div id="mocha"></div>
 
-        <script type="text/javascript">
-            mocha.setup({
-                "ui": "bdd",
-                "reporter": mocha.reporters.HTML,
-                "globals": ["_gaq", "jQuery*", "setTimeout", "setInterval", "clearTimeout", "clearInterval"]
-            });
-        </script>
-
-        <script type="text/javascript" src="main.js"></script>
+        <script type="text/javascript" data-main="main" src="../../modular.js"></script>
     </body>
 </html>
