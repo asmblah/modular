@@ -23,6 +23,7 @@
 
 (function () {
     "use strict";
+    /*global require, module */
 
     var global = new [Function][0]("return this;")(), // Keep JSLint happy
         has = {}.hasOwnProperty,
@@ -69,6 +70,8 @@
             getType: function (obj) {
                 return {}.toString.call(obj).match(/\[object ([\s\S]*)\]/)[1];
             },
+
+            global: global,
 
             isArray: function (str) {
                 return util.getType(str) === "Array";
@@ -118,7 +121,7 @@
                     util.each(dependencyIDs, function (dependencyID) {
                         var dependency;
 
-                        dependencyID = loader.resolveDependencyID(dependencyID, module.id, get(module.config, "paths"));
+                        dependencyID = loader.resolveDependencyID(dependencyID, module.id, get(module.config, "paths"), get(module.config, "exclude"));
 
                         if (dependencyID === "require") {
                             module.addDependency(new Module(loader, null, function (arg1, arg2, arg3, arg4) {
@@ -396,11 +399,15 @@
                     return this.anonymousDefines.pop();
                 },
 
-                resolveDependencyID: function (id, dependentID, mappings) {
+                resolveDependencyID: function (id, dependentID, mappings, exclude) {
                     var previousID;
 
                     if (!util.isString(id)) {
                         throw new Error("Invalid dependency id");
+                    }
+
+                    if (exclude && exclude.test(id)) {
+                        return id;
                     }
 
                     if (/^\.\.?\//.test(id) && dependentID) {
@@ -451,43 +458,72 @@
         }()),
         modular = new Modular();
 
-    // Don't override an existing AMD define() loader: instead, register the Modular instance
-    if (global.define) {
-        global.define(modular);
-    } else {
-        util.extend(global, {
-            define: modular.createDefiner(),
-            require: modular.createRequirer()
-        });
+    (function () {
+        var isNode = (typeof require !== "undefined" && typeof module !== "undefined");
 
-        // Browser transport
-        if (global === global.window) {
-            modular.configure({
-                "baseUrl": global.location.pathname.replace(/\/$/, "")
-            });
+        // Don't override an existing AMD loader: instead, register the Modular instance
+        if (global.define) {
+            global.define(modular);
+        } else {
+            global.define = modular.createDefiner();
 
-            modular.addTransport(function (callback, module) {
-                var script = global.document.createElement("script"),
-                    head = global.document.getElementsByTagName("head")[0];
+            if (isNode) {
+                module.exports = modular;
 
-                script.onload = function () {
-                    var define = modular.popAnonymousDefine();
+                (function (nodeRequire) {
+                    var fs = nodeRequire("fs"),
+                        // Expose Modular require() to loaded script
+                        require = modular.createRequirer();
 
-                    callback(define);
-                };
-                script.type = "text/javascript";
-                script.src = get(modular.config, "baseUrl").replace(/\/$/, "") + "/" + module.getID().replace(/\.js$/, "") + ".js";
-                head.insertBefore(script, head.firstChild);
-            });
+                    modular.addTransport(function (callback, module) {
+                        var path = module.getID().replace(/\.js$/, "") + ".js";
+                        fs.readFile(path, "utf8", function (error, data) {
+                            /*jslint evil: true */
+                            eval(data);
+                            callback(modular.popAnonymousDefine());
+                        });
+                    });
+                }(require));
+            } else {
+                global.require = modular.createRequirer();
 
-            util.each(global.document.getElementsByTagName("script"), function (script) {
-                var main = script.getAttribute("data-main");
+                // Browser transport
+                if (global === global.window) {
+                    modular.configure({
+                        "baseUrl": global.location.pathname.replace(/\/?[^\/]+$/, ""),
+                        "exclude": /^(https?:)?\/\//
+                    });
 
-                if (main) {
-                    modular.require(".", [main]);
-                    return false;
+                    modular.addTransport(function (callback, module) {
+                        var script = global.document.createElement("script"),
+                            head = global.document.getElementsByTagName("head")[0];
+
+                        function makePath(baseURI, id) {
+                            if (/^(https?:)?\/\//.test(id)) {
+                                return id;
+                            }
+
+                            return baseURI.replace(/\/$/, "") + "/" + id.replace(/\.js$/, "") + ".js";
+                        }
+
+                        script.onload = function () {
+                            callback(modular.popAnonymousDefine());
+                        };
+                        script.type = "text/javascript";
+                        script.src = makePath(get(modular.config, "baseUrl"), module.getID());
+                        head.insertBefore(script, head.firstChild);
+                    });
+
+                    util.each(global.document.getElementsByTagName("script"), function (script) {
+                        var main = script.getAttribute("data-main");
+
+                        if (main) {
+                            modular.require(".", [main]);
+                            return false;
+                        }
+                    });
                 }
-            });
+            }
         }
-    }
+    }());
 }());

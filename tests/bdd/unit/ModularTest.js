@@ -232,6 +232,16 @@ define([
                     expect(loader.resolveDependencyID(dependencyID, dependentID, mappings)).to.equal(expectedResultID);
                 });
             });
+
+            describe("ID exclusions", function () {
+                it("should not exclude any IDs from processing by default", function () {
+                    expect(loader.resolveDependencyID("./test")).to.equal("test");
+                });
+
+                it("should exclude a specified ID", function () {
+                    expect(loader.resolveDependencyID("root/../../", null, null, /\.\.\/$/)).to.equal("root/../../");
+                });
+            });
         });
 
         describe("addTransport()", function () {
