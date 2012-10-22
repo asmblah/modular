@@ -495,9 +495,6 @@
                     });
 
                     modular.addTransport(function (callback, module) {
-                        var script = global.document.createElement("script"),
-                            head = global.document.getElementsByTagName("head")[0];
-
                         function makePath(baseURI, id) {
                             if (/^(https?:)?\/\//.test(id)) {
                                 return id;
@@ -506,11 +503,19 @@
                             return baseURI.replace(/\/$/, "") + "/" + id.replace(/\.js$/, "") + ".js";
                         }
 
+                        var script = global.document.createElement("script"),
+                            head = global.document.getElementsByTagName("head")[0],
+                            uri = makePath(get(module.config, "baseUrl"), module.getID());
+
+                        if (get(module.config, "cache") === false) {
+                            uri += "?__r=" + Math.random();
+                        }
+
                         script.onload = function () {
                             callback(modular.popAnonymousDefine());
                         };
                         script.type = "text/javascript";
-                        script.src = makePath(get(modular.config, "baseUrl"), module.getID());
+                        script.src = uri;
                         head.insertBefore(script, head.firstChild);
                     });
 
