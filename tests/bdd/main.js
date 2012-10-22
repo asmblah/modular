@@ -16,7 +16,9 @@ require({
         "globals": ["_gaq", "jQuery*", "setTimeout", "setInterval", "clearTimeout", "clearInterval"]
     });
 
-    require([
+    require({
+        cache: false
+    }, [
         "./acceptance/CommonJS/ExportsTest.js",
         "./acceptance/CommonJS/ModuleTest.js",
         "./acceptance/CommonJS/RequireTest.js",
