@@ -167,16 +167,28 @@
                     var loader = this.loader,
                         module = this;
 
-                    function load(dependencyValues, callback) {
+                    function load(dependencyValues, factory, callback) {
                         module.mode = LOADED;
                         module.value = (
-                            util.isFunction(module.factory) ?
-                                module.factory.apply(global, dependencyValues) :
-                                module.factory
+                            util.isFunction(factory) ?
+                                    factory.apply(global, dependencyValues) :
+                                    factory
                         ) || module.value;
 
                         if (callback) {
                             callback(module.value);
+                        }
+                    }
+
+                    function filter(dependencyValues, callback) {
+                        var factoryFilter = get(module.config, "factoryFilter");
+
+                        if (util.isFunction(factoryFilter)) {
+                            factoryFilter(module.factory, function (factory) {
+                                load(dependencyValues, factory, callback);
+                            });
+                        } else {
+                            load(dependencyValues, module.factory, callback);
                         }
                     }
 
@@ -192,12 +204,12 @@
                                 pending -= 1;
                                 if (pending === 0) {
                                     done = true;
-                                    load(dependencyValues, callback);
+                                    filter(dependencyValues, callback);
                                 }
                             });
                         });
                         if (!done && pending === 0) {
-                            load(dependencyValues, callback);
+                            filter(dependencyValues, callback);
                         }
                     }
 
