@@ -246,6 +246,29 @@ define([
             });
         });
 
+        it("should pass factories through factoryFilter() if specified", function (done) {
+            var context = {};
+
+            loader.require({
+                factoryFilter: function (factory, callback) {
+                    callback(function () {
+                        return factory.apply(context, arguments);
+                    });
+                }
+            }, function () {
+                expect(this).to.equal(context);
+                done();
+            });
+        });
+
+        it("should ignore factory filter if a non-function is specified", function (done) {
+            loader.require({
+                factoryFilter: { invalid: "oh yes" }
+            }, function () {
+                done();
+            });
+        });
+
         describe("ID mapping", function () {
             it("should support mapping of base term", function (done) {
                 var earth = {};
