@@ -19,14 +19,14 @@ require({
     require({
         cache: false
     }, [
-        "./acceptance/CommonJS/ExportsTest.js",
-        "./acceptance/CommonJS/ModuleTest.js",
-        "./acceptance/CommonJS/RequireTest.js",
-        "./acceptance/BrowserTest.js",
-        "./acceptance/DefineRequireTest.js",
-        "./acceptance/SampleProgramTest.js",
-        "./integration/NamedModuleTest.js",
-        "./unit/ModularTest.js"
+        "./acceptance/CommonJS/ExportsTest",
+        "./acceptance/CommonJS/ModuleTest",
+        "./acceptance/CommonJS/RequireTest",
+        "./acceptance/BrowserTest",
+        "./acceptance/DefineRequireTest",
+        "./acceptance/SampleProgramTest",
+        "./integration/NamedModuleTest",
+        "./unit/ModularTest"
     ], function () {
         mocha.run();
     });
