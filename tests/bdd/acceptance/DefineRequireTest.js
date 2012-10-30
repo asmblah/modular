@@ -383,5 +383,56 @@ define([
                 });
             });
         });
+
+        describe("ID filtering", function () {
+            it("should look up dependency after filtering", function (done) {
+                var DOM = {};
+
+                loader.define("/assets/js/Library/UI/DOM", DOM);
+
+                loader.require({
+                    idFilter: function (id, callback) {
+                        callback("/assets/js/" + id.replace(/\./g, "/"));
+                    }
+                }, [
+                    "Library.UI.DOM"
+                ], function (
+                    ImportedDOM
+                ) {
+                    expect(ImportedDOM).to.equal(DOM);
+                    done();
+                });
+            });
+
+            it("should pass multiple dependencies in order even if id filter callbacks are called out of order", function (done) {
+                var Modal = {},
+                    TextBox = {},
+                    idFilters = [];
+
+                loader.define("/assets/js/Library/UI/DOM/Modal", Modal);
+                loader.define("/assets/js/Library/UI/DOM/TextBox", TextBox);
+
+                loader.require({
+                    idFilter: function (id, callback) {
+                        idFilters.push({
+                            callback: callback,
+                            id: "/assets/js/" + id.replace(/\./g, "/")
+                        });
+                    }
+                }, [
+                    "Library.UI.DOM.Modal",
+                    "Library.UI.DOM.TextBox"
+                ], function (
+                    ImportedDOM,
+                    ImportedTextBox
+                ) {
+                    expect(ImportedTextBox).to.equal(TextBox);
+                    done();
+                });
+
+                idFilters[1].callback(idFilters[1].id);
+                idFilters[0].callback(idFilters[0].id);
+            });
+        });
     });
 });

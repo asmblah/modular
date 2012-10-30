@@ -89,12 +89,49 @@
                 return typeof str === "string" || util.getType(str) === "String";
             }
         },
+        Funnel = (function () {
+            function Funnel() {
+                this.doneCallbacks = [];
+                this.pending = 0;
+            }
+            util.extend(Funnel.prototype, {
+                add: function (callback) {
+                    var funnel = this;
+
+                    funnel.pending += 1;
+
+                    return function () {
+                        var result = callback.apply(this, arguments);
+
+                        funnel.pending -= 1;
+                        if (funnel.pending === 0) {
+                            util.each(funnel.doneCallbacks, function (callback) {
+                                callback();
+                            });
+                        }
+
+                        return result;
+                    };
+                },
+
+                done: function (callback) {
+                    if (this.pending === 0) {
+                        callback();
+                    } else {
+                        this.doneCallbacks.push(callback);
+                    }
+                }
+            });
+
+            return Funnel;
+        }()),
         Module = (function () {
             var UNDEFINED = 1,
                 TRANSPORTING = 2,
-                DEFINED = 3,
-                DEFERRED = 4,
-                LOADED = 5;
+                FILTERING = 3,
+                DEFINED = 4,
+                DEFERRED = 5,
+                LOADED = 6;
 
             function Module(loader, id, value) {
                 this.config = {};
@@ -108,34 +145,35 @@
                 this.whenLoaded = null;
             }
             util.extend(Module.prototype, {
-                addDependency: function (dependency) {
-                    this.dependencies.push(dependency);
-                },
-
-                define: function (config, dependencyIDs, factory) {
+                define: function (config, dependencyIDs, factory, callback) {
                     var loader = this.loader,
                         module = this,
                         exports = {},
-                        dependencyConfigs = {};
+                        dependencyConfigs = {},
+                        idFilter,
+                        funnel = new Funnel();
 
-                    util.extend(this.config, config);
+                    util.extend(module.config, config);
+                    idFilter = get(module.config, "idFilter") || function (id, callback) {
+                        callback(id);
+                    };
 
-                    util.each(dependencyIDs, function (dependencyID) {
+                    util.each(dependencyIDs, function (dependencyID, dependencyIndex) {
                         var dependency;
 
                         dependencyID = loader.resolveDependencyID(dependencyID, module.id, get(module.config, "paths"), get(module.config, "exclude"));
 
                         if (dependencyID === "require") {
-                            module.addDependency(new Module(loader, null, function (arg1, arg2, arg3, arg4) {
+                            module.dependencies[dependencyIndex] = new Module(loader, null, function (arg1, arg2, arg3, arg4) {
                                 var args = loader.parseArgs(arg1, arg2, arg3, arg4),
                                     config = util.extend({}, module.config, args.config);
                                 loader.require(config, args.id || module.id, args.dependencyIDs, args.factory);
-                            }));
+                            });
                         } else if (dependencyID === "exports") {
                             module.value = exports;
-                            module.addDependency(new Module(loader, null, exports));
+                            module.dependencies[dependencyIndex] = new Module(loader, null, exports);
                         } else if (dependencyID === "module") {
-                            module.addDependency(new Module(loader, null, {
+                            module.dependencies[dependencyIndex] = new Module(loader, null, {
                                 id: module.id,
                                 uri: module.id,
                                 config: module.config,
@@ -146,17 +184,26 @@
                                         module.whenLoaded(value);
                                     };
                                 }
-                            }));
+                            });
                         } else {
-                            dependency = loader.getModule(dependencyID) || loader.createModule(dependencyID);
-                            module.addDependency(dependency);
-                            util.extend(dependency.config, module.config);
+                            idFilter(dependencyID, funnel.add(function (dependencyID) {
+                                dependency = loader.getModule(dependencyID) || loader.createModule(dependencyID);
+                                module.dependencies[dependencyIndex] = dependency;
+                                util.extend(dependency.config, module.config);
+                            }));
                         }
                     });
 
-                    this.factory = factory;
+                    module.factory = factory;
 
-                    this.mode = DEFINED;
+                    module.mode = FILTERING;
+
+                    funnel.done(function () {
+                        module.mode = DEFINED;
+                        if (callback) {
+                            callback();
+                        }
+                    });
                 },
 
                 getID: function () {
@@ -172,7 +219,7 @@
                 },
 
                 isDefined: function () {
-                    return this.mode >= DEFINED;
+                    return this.mode >= FILTERING;
                 },
 
                 isLoaded: function () {
@@ -242,13 +289,13 @@
 
                     function completeDefine(define) {
                         if (define) {
-                            module.define(define.config, define.dependencyIDs, define.factory);
-
-                            loadDependencies(function (value) {
-                                util.each(module.requesterQueue, function (callback) {
-                                    callback(value);
+                            module.define(define.config, define.dependencyIDs, define.factory, function () {
+                                loadDependencies(function (value) {
+                                    util.each(module.requesterQueue, function (callback) {
+                                        callback(value);
+                                    });
+                                    module.requesterQueue = null;
                                 });
-                                module.requesterQueue = null;
                             });
                         }
                     }
@@ -485,9 +532,9 @@
                         id = args.id,
                         module = new Module(this, id);
 
-                    module.define(args.config, args.dependencyIDs, args.factory);
-
-                    module.load();
+                    module.define(args.config, args.dependencyIDs, args.factory, function () {
+                        module.load();
+                    });
                 },
 
                 util: util
