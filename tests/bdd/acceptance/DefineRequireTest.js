@@ -1,8 +1,10 @@
 define([
     "vendor/chai/chai",
+    "vendor/sinon/sinon",
     "root/modular"
 ], function (
     chai,
+    sinon,
     modular
 ) {
     "use strict";
@@ -266,6 +268,44 @@ define([
                 factoryFilter: { invalid: "oh yes" }
             }, function () {
                 done();
+            });
+        });
+
+        describe("deferred module loading - if module.defer() is called", function () {
+            var callback,
+                spy;
+
+            beforeEach(function () {
+                spy = sinon.spy();
+
+                loader.define("Future", [
+                    "module"
+                ], function (
+                    module
+                ) {
+                    callback = module.defer();
+                });
+
+                // This module depends on the one above - so we can check when the one above is loaded
+                loader.require([
+                    "Future"
+                ], spy);
+            });
+
+            it("should not treat module as loaded if callback has not yet been called", function () {
+                expect(spy.called).to.not.be.ok;
+            });
+
+            it("should treat module as loaded after callback has been called", function () {
+                callback();
+                expect(spy.called).to.be.ok;
+            });
+
+            it("should use the value passed as first argument to the callback as the module's value", function () {
+                var value = {};
+
+                callback(value);
+                expect(spy.calledWith(value)).to.be.ok;
             });
         });
 

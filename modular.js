@@ -93,7 +93,8 @@
             var UNDEFINED = 1,
                 TRANSPORTING = 2,
                 DEFINED = 3,
-                LOADED = 4;
+                DEFERRED = 4,
+                LOADED = 5;
 
             function Module(loader, id, value) {
                 this.config = {};
@@ -104,6 +105,7 @@
                 this.mode = value ? LOADED : UNDEFINED;
                 this.requesterQueue = null;
                 this.value = value || null;
+                this.whenLoaded = null;
             }
             util.extend(Module.prototype, {
                 addDependency: function (dependency) {
@@ -137,7 +139,13 @@
                                 id: module.id,
                                 uri: module.id,
                                 config: module.config,
-                                exports: exports
+                                exports: exports,
+                                defer: function () {
+                                    module.mode = DEFERRED;
+                                    return function (value) {
+                                        module.whenLoaded(value);
+                                    };
+                                }
                             }));
                         } else {
                             dependency = loader.getModule(dependencyID) || loader.createModule(dependencyID);
@@ -159,24 +167,43 @@
                     return this.value;
                 },
 
+                isDeferred: function () {
+                    return this.mode === DEFERRED;
+                },
+
                 isDefined: function () {
                     return this.mode >= DEFINED;
+                },
+
+                isLoaded: function () {
+                    return this.mode === LOADED;
                 },
 
                 load: function (callback) {
                     var loader = this.loader,
                         module = this;
 
-                    function load(dependencyValues, factory, callback) {
+                    function load(dependencyValues, value, callback) {
                         module.mode = LOADED;
-                        module.value = (
-                            util.isFunction(factory) ?
-                                    factory.apply(global, dependencyValues) :
-                                    factory
-                        ) || module.value;
+                        module.value = value || module.value;
 
                         if (callback) {
                             callback(module.value);
+                        }
+                    }
+
+                    function getModuleValue(dependencyValues, factory, callback) {
+                        var value = util.isFunction(factory) ?
+                                    factory.apply(global, dependencyValues) :
+                                    factory;
+
+                        if (module.isDeferred()) {
+                            module.whenLoaded = function (value) {
+                                module.whenLoaded = null;
+                                load(dependencyValues, value, callback);
+                            };
+                        } else {
+                            load(dependencyValues, value, callback);
                         }
                     }
 
@@ -185,10 +212,10 @@
 
                         if (util.isFunction(factoryFilter)) {
                             factoryFilter(module.factory, function (factory) {
-                                load(dependencyValues, factory, callback);
+                                getModuleValue(dependencyValues, factory, callback);
                             });
                         } else {
-                            load(dependencyValues, module.factory, callback);
+                            getModuleValue(dependencyValues, module.factory, callback);
                         }
                     }
 
