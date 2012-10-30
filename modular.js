@@ -267,24 +267,19 @@
                     }
 
                     function loadDependencies(callback) {
-                        var pending = module.dependencies.length,
-                            dependencyValues = [],
-                            done = false;
+                        var funnel = new Funnel(),
+                            dependencyValues = [];
 
                         util.each(module.dependencies, function (dependency, index) {
-                            dependency.load(function (value) {
+                            dependency.load(funnel.add(function (value) {
                                 // These may load in any order, so don't just .push() them
                                 dependencyValues[index] = value;
-                                pending -= 1;
-                                if (pending === 0) {
-                                    done = true;
-                                    filter(dependencyValues, callback);
-                                }
-                            });
+                            }));
                         });
-                        if (!done && pending === 0) {
+
+                        funnel.done(function () {
                             filter(dependencyValues, callback);
-                        }
+                        });
                     }
 
                     function completeDefine(define) {
