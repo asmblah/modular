@@ -412,10 +412,6 @@
                     }
                 },
 
-                each: util.each,
-
-                extend: util.extend,
-
                 getModule: function (id) {
                     return this.modules[id];
                 },
