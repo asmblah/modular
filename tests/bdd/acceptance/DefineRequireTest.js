@@ -263,14 +263,6 @@ define([
             });
         });
 
-        it("should ignore factory filter if a non-function is specified", function (done) {
-            loader.require({
-                factoryFilter: { invalid: "oh yes" }
-            }, function () {
-                done();
-            });
-        });
-
         describe("deferred module loading - if module.defer() is called", function () {
             var callback,
                 spy;

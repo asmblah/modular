@@ -255,15 +255,13 @@
                     }
 
                     function filter(dependencyValues, callback) {
-                        var factoryFilter = get(module.config, "factoryFilter");
+                        var factoryFilter = get(module.config, "factoryFilter") || function (factory, callback) {
+                            callback(factory);
+                        };
 
-                        if (util.isFunction(factoryFilter)) {
-                            factoryFilter(module.factory, function (factory) {
-                                getModuleValue(dependencyValues, factory, callback);
-                            });
-                        } else {
-                            getModuleValue(dependencyValues, module.factory, callback);
-                        }
+                        factoryFilter(module.factory, function (factory) {
+                            getModuleValue(dependencyValues, factory, callback);
+                        });
                     }
 
                     function loadDependencies(callback) {
