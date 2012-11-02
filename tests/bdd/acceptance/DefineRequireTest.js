@@ -252,9 +252,9 @@ define([
             var context = {};
 
             loader.require({
-                factoryFilter: function (factory, callback) {
-                    callback(function () {
-                        return factory.apply(context, arguments);
+                factoryFilter: function (args) {
+                    args.callback(function () {
+                        return args.factory.apply(context, arguments);
                     });
                 }
             }, function () {
