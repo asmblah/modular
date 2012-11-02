@@ -13,3 +13,10 @@ vendor/mocha:
   squashed: true
   type: git
   url: git://github.com/asmblah/mocha.git
+vendor/sinon-chai: 
+  branch: master
+  remote: master/braid/vendor/sinon-chai
+  revision: 80f550e6b5e87a8d123ae95581a15739df03dd48
+  squashed: true
+  type: git
+  url: git://github.com/domenic/sinon-chai.git
