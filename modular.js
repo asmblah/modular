@@ -32,7 +32,7 @@
             return obj[prop];
         },
         util = {
-            each: function (obj, callback) {
+            each: function (obj, callback, options) {
                 var key,
                     length;
 
@@ -40,7 +40,9 @@
                     return;
                 }
 
-                if (has.call(obj, "length")) {
+                options = options || {};
+
+                if (has.call(obj, "length") && !options.keys) {
                     for (key = 0, length = obj.length; key < length; key += 1) { // Keep JSLint happy with "+= 1"
                         if (callback.call(obj[key], obj[key], key) === false) {
                             break;

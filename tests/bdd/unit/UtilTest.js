@@ -194,6 +194,14 @@ define([
 
                     expect(callback).to.be.calledTwice;
                 });
+
+                it("should call callback twice if options.keys is set", function () {
+                    var callback = sinon.spy();
+
+                    loader.util.each({ 0: "the great pretender", length: 1 }, callback, { keys: true });
+
+                    expect(callback).to.be.calledTwice;
+                });
             });
         });
     });
