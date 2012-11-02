@@ -242,6 +242,15 @@ define([
                     prop2: 8
                 });
             });
+
+            it("should extend the target object even if the source object contains a \"length\" property", function () {
+                var target = {},
+                    source = { length: 10 };
+
+                loader.util.extend(target, source);
+
+                expect(target.length).to.equal(10);
+            });
         });
     });
 });

@@ -63,7 +63,7 @@
                 util.each(slice.call(arguments, 1), function () {
                     util.each(this, function (val, key) {
                         target[key] = val;
-                    });
+                    }, { keys: true });
                 });
 
                 return target;
