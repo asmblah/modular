@@ -4,9 +4,13 @@ require({
         "vendor": "../../vendor"
     }
 }, [
-    "require"
+    "require",
+    "vendor/chai/chai",
+    "vendor/sinon-chai/lib/sinon-chai"
 ], function (
-    require
+    require,
+    chai,
+    sinonChai
 ) {
     "use strict";
 
@@ -15,6 +19,8 @@ require({
         "reporter": mocha.reporters.HTML,
         "globals": ["_gaq", "jQuery*", "setTimeout", "setInterval", "clearTimeout", "clearInterval"]
     });
+
+    chai.use(sinonChai);
 
     require({
         cache: false
@@ -26,7 +32,8 @@ require({
         "./acceptance/DefineRequireTest",
         "./acceptance/SampleProgramTest",
         "./integration/NamedModuleTest",
-        "./unit/ModularTest"
+        "./unit/ModularTest",
+        "./unit/UtilTest"
     ], function () {
         mocha.run();
     });
