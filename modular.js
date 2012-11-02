@@ -503,8 +503,6 @@
                         id = dependentID.replace(/[^\/]+$/, "") + id;
                     }
 
-                    id = id.replace(/(^|\/)(\.?\/)+/g, "$1").replace(/^\//, ""); // Resolve same-directory terms
-
                     // Resolve parent-directory terms
                     while (previousID !== id) {
                         previousID = id;
@@ -526,6 +524,8 @@
                             return id;
                         }());
                     }
+
+                    id = id.replace(/(^|\/)(\.?\/)+/g, "$1").replace(/^\//, ""); // Resolve same-directory terms
 
                     return id;
                 },

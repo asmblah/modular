@@ -374,6 +374,25 @@ define([
                     done();
                 });
             });
+
+            it("should not apply mapping to IDs with same-directory term at start", function (done) {
+                var value = {};
+
+                loader.define("module/here", value);
+
+                loader.require({
+                    paths: {
+                        "module": "not/here"
+                    }
+                }, [
+                    "./module/here"
+                ], function (
+                    importedValue
+                ) {
+                    expect(importedValue).to.equal(value);
+                    done();
+                });
+            });
         });
 
         describe("ID filtering", function () {
