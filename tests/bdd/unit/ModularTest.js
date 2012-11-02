@@ -77,6 +77,21 @@ define([
                     done();
                 });
             });
+
+            it("should support importing modules that don't call define(...)", function (done) {
+                loader.addTransport(function (callback) {
+                    callback(loader.popAnonymousDefine());
+                });
+
+                loader.require([
+                    "even/more/mystical"
+                ], function (
+                    importedMysticism
+                ) {
+                    expect(importedMysticism).to.equal(null);
+                    done();
+                });
+            });
         });
 
         describe("parseArgs()", function () {

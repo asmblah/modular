@@ -289,16 +289,22 @@
                     }
 
                     function completeDefine(define) {
-                        if (define) {
-                            module.define(define.config, define.dependencyIDs, define.factory, function () {
-                                loadDependencies(function (value) {
-                                    util.each(module.requesterQueue, function (callback) {
-                                        callback(value);
-                                    });
-                                    module.requesterQueue = null;
-                                });
-                            });
+                        if (!define) {
+                            define = {
+                                config: {},
+                                dependencyIDs: [],
+                                factory: null
+                            };
                         }
+
+                        module.define(define.config, define.dependencyIDs, define.factory, function () {
+                            loadDependencies(function (value) {
+                                util.each(module.requesterQueue, function (callback) {
+                                    callback(value);
+                                });
+                                module.requesterQueue = null;
+                            });
+                        });
                     }
 
                     if (module.mode === UNDEFINED) {
