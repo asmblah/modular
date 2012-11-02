@@ -393,6 +393,25 @@ define([
                     done();
                 });
             });
+
+            it("should support mapping a specific module ID", function (done) {
+                var value = {};
+
+                loader.define("the/library/is/here-UltiLib", value);
+
+                loader.require({
+                    paths: {
+                        "UltiLib": "the/library/is/here-UltiLib"
+                    }
+                }, [
+                    "UltiLib"
+                ], function (
+                    importedUltiLib
+                ) {
+                    expect(importedUltiLib).to.equal(value);
+                    done();
+                });
+            });
         });
 
         describe("ID filtering", function () {

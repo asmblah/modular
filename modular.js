@@ -515,6 +515,10 @@
                                 portion,
                                 index;
 
+                            if (mappings[id]) {
+                                return mappings[id];
+                            }
+
                             for (index = terms.length - 1; index >= 0; index -= 1) {
                                 portion = terms.slice(0, index).join("/");
                                 if (mappings[portion] || mappings[portion + "/"]) {
