@@ -204,5 +204,44 @@ define([
                 });
             });
         });
+
+        describe("extend()", function () {
+            it("should return the target object", function () {
+                var target = {};
+
+                expect(loader.util.extend(target)).to.equal(target);
+            });
+
+            it("should extend the target object with the first source argument provided", function () {
+                var target = {},
+                    source = { prop: 7 };
+
+                loader.util.extend(target, source);
+
+                expect(target.prop).to.equal(7);
+            });
+
+            it("should extend the target object with the second source argument provided", function () {
+                var target = {},
+                    source = { prop: 7 };
+
+                loader.util.extend(target, {}, source);
+
+                expect(target.prop).to.equal(7);
+            });
+
+            it("should extend the target object with both source arguments provided", function () {
+                var target = {},
+                    source1 = { prop1: 2 },
+                    source2 = { prop2: 8 };
+
+                loader.util.extend(target, source1, source2);
+
+                expect(target).to.deep.equal({
+                    prop1: 2,
+                    prop2: 8
+                });
+            });
+        });
     });
 });
