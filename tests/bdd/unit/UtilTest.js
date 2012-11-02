@@ -177,6 +177,24 @@ define([
                     });
                 });
             });
+
+            describe("for an object with a \"length\" property", function () {
+                it("should only call callback once if <object>.length = 1 and <object>[0] is defined", function () {
+                    var callback = sinon.spy();
+
+                    loader.util.each({ 0: "the great pretender", length: 1 }, callback);
+
+                    expect(callback).to.be.calledOnce;
+                });
+
+                it("should call callback twice if <object>.length = 2 and <object>[0] and <object>[1] are defined", function () {
+                    var callback = sinon.spy();
+
+                    loader.util.each({ 0: "the great", 1: "pretender", length: 2 }, callback);
+
+                    expect(callback).to.be.calledTwice;
+                });
+            });
         });
     });
 });
