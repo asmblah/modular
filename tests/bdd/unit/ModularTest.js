@@ -55,6 +55,28 @@ define([
                     done();
                 });
             });
+
+            it("should support dependencies being loaded asynchronously", function (done) {
+                var mystical = {};
+
+                loader.addTransport(function (callback) {
+                    // Just do a simple test by breaking the call stack
+                    setTimeout(function () {
+                        callback(loader.popAnonymousDefine());
+                    });
+                });
+
+                loader.define(mystical);
+
+                loader.require([
+                    "mystical"
+                ], function (
+                    importedMystical
+                ) {
+                    expect(importedMystical).to.equal(mystical);
+                    done();
+                });
+            });
         });
 
         describe("parseArgs()", function () {
@@ -240,30 +262,6 @@ define([
 
                 it("should exclude a specified ID", function () {
                     expect(loader.resolveDependencyID("root/../../", null, null, /\.\.\/$/)).to.equal("root/../../");
-                });
-            });
-        });
-
-        describe("addTransport()", function () {
-            it("should support dependencies being loaded asynchronously", function (done) {
-                var mystical = {};
-
-                loader.addTransport(function (callback) {
-                    // Just do a simple test by breaking the call stack
-                    setTimeout(function () {
-                        callback(loader.popAnonymousDefine());
-                    });
-                });
-
-                loader.define(mystical);
-
-                loader.require([
-                    "mystical"
-                ], function (
-                    importedMystical
-                ) {
-                    expect(importedMystical).to.equal(mystical);
-                    done();
                 });
             });
         });
