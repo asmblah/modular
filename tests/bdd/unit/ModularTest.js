@@ -183,6 +183,14 @@ define([
                 expect(loader.resolveDependencyID(dependencyID, dependentID)).to.equal(expectedResultID);
             });
 
+            it("should leave parent terms in place if above dependent ID", function () {
+                var dependencyID = "../../../there",
+                    dependentID = "in/here",
+                    expectedResultID = "../../there";
+
+                expect(loader.resolveDependencyID(dependencyID, dependentID)).to.equal(expectedResultID);
+            });
+
             it("should resolve relative dependency IDs with same-directory term at start", function () {
                 var dependencyID = "./there/somewhere",
                     dependentID = "module/in/here",

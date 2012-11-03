@@ -506,7 +506,7 @@
                     // Resolve parent-directory terms
                     while (previousID !== id) {
                         previousID = id;
-                        id = id.replace(/[^\/]*\/\.\.\//, "");
+                        id = id.replace(/(^|\/)(?!\.\.)([^\/]*)\/\.\.\//, "$1");
                     }
 
                     if (mappings && !/^\.\.?\//.test(id)) {
