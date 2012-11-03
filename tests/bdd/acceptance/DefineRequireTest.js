@@ -230,6 +230,27 @@ define([
             });
         });
 
+        it("should only evaluate a factory function for a module once", function (done) {
+            var factory = function () { return {}; };
+
+            loader.define("magic", factory);
+
+            loader.require([
+                "magic"
+            ], function (
+                earlyImportedMagic
+            ) {
+                loader.require([
+                    "magic"
+                ], function (
+                    lateImportedMagic
+                ) {
+                    expect(lateImportedMagic).to.equal(earlyImportedMagic);
+                    done();
+                });
+            });
+        });
+
         it("should pass dependencies to closure in the order requested", function () {
             var dep1 = {},
                 dep2 = {};
