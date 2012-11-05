@@ -554,6 +554,14 @@
     (function () {
         var isNode = (typeof require !== "undefined" && typeof module !== "undefined");
 
+        function makePath(baseURI, id) {
+            if (/^(https?:)?\/\//.test(id)) {
+                return id;
+            }
+
+            return (baseURI ? baseURI.replace(/\/$/, "") + "/" : "") + id.replace(/\.js$/, "") + ".js";
+        }
+
         // Don't override an existing AMD loader: instead, register the Modular instance
         if (global.define) {
             global.define(modular);
@@ -569,7 +577,7 @@
                         require = modular.createRequirer();
 
                     modular.addTransport(function (callback, module) {
-                        var path = module.getID().replace(/\.js$/, "") + ".js";
+                        var path = makePath(get(module.config, "baseUrl"), module.getID());
                         fs.readFile(path, "utf8", function (error, data) {
                             /*jslint evil: true */
                             eval(data);
@@ -588,14 +596,6 @@
                     });
 
                     modular.addTransport(function (callback, module) {
-                        function makePath(baseURI, id) {
-                            if (/^(https?:)?\/\//.test(id)) {
-                                return id;
-                            }
-
-                            return baseURI.replace(/\/$/, "") + "/" + id.replace(/\.js$/, "") + ".js";
-                        }
-
                         var script = global.document.createElement("script"),
                             head = global.document.getElementsByTagName("head")[0],
                             uri = makePath(get(module.config, "baseUrl"), module.getID());
