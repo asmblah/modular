@@ -1,15 +1,40 @@
 require({
     paths: {
-        "js": "/../../../js",
-        "bdd": ".",
-        "lib": "/../../../lib",
-        "orangeJS": "/../../../lib/orangeJS/js",
+        "root": "../..",
         "vendor": "../../vendor"
     }
 }, [
-    "bdd/modular.js"
-], function () {
+    "require",
+    "vendor/chai/chai",
+    "vendor/sinon-chai/lib/sinon-chai"
+], function (
+    require,
+    chai,
+    sinonChai
+) {
     "use strict";
 
-    mocha.run();
+    mocha.setup({
+        "ui": "bdd",
+        "reporter": mocha.reporters.HTML,
+        "globals": ["_gaq", "jQuery*", "setTimeout", "setInterval", "clearTimeout", "clearInterval"]
+    });
+
+    chai.use(sinonChai);
+
+    require({
+        cache: false
+    }, [
+        "./acceptance/CommonJS/ExportsTest",
+        "./acceptance/CommonJS/ModuleTest",
+        "./acceptance/CommonJS/RequireTest",
+        "./acceptance/BrowserTest",
+        "./acceptance/DefineRequireTest",
+        "./acceptance/SampleProgramTest",
+        "./integration/NamedModuleTest",
+        "./unit/ModularTest",
+        "./unit/UtilTest"
+    ], function () {
+        mocha.run();
+    });
 });

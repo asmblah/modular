@@ -1,6 +1,7 @@
 /*
  *  Modular - JavaScript AMD Framework
  *  Copyright (c) 2012 http://ovms.co. All Rights Reserved.
+ *  Implements the AMD specification - see https://github.com/amdjs/amdjs-api/wiki/AMD
  *
  *  ====
  *
@@ -20,506 +21,626 @@
  *  along with Modular.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*global define, require */
-
 (function () {
     "use strict";
+    /*global require, module */
 
-    var ROOT_REGEX = /^\//,
-        global = new [Function][0]("return this;")(), // Keep JSLint happy
-        defaults = {
-            "baseUrl": "",
-            "paths": {},
-            "pathFilter": function (path) {
-                return path;
-            },
-            "versions": {},
-            "versionFilter": function (stack, path, version) {
-                return {
-                    val: stack[0]
-                };
-            },
-            "fetch": function (config, path, ready) {},
-            "anonymous": function (args) {}
-        },
-        pendings = {},
-        modules = {},
+    var global = new [Function][0]("return this;")(), // Keep JSLint happy
         has = {}.hasOwnProperty,
-        slice = [].slice;
+        slice = [].slice,
+        get = function (obj, prop) {
+            return obj[prop];
+        },
+        util = {
+            each: function (obj, callback, options) {
+                var key,
+                    length;
 
-    function each(obj, callback) {
-        var key,
-            length;
-
-        if (!obj) {
-            return;
-        }
-
-        if (has.call(obj, "length")) {
-            for (key = 0, length = obj.length; key < length; key += 1) { // Keep JSLint happy with "+= 1"
-                if (callback.call(obj[key], obj[key], key) === false) {
-                    break;
+                if (!obj) {
+                    return;
                 }
-            }
-        } else {
-            for (key in obj) {
-                if (obj.hasOwnProperty(key)) {
-                    if (callback.call(obj[key], obj[key], key) === false) {
-                        break;
-                    }
-                }
-            }
-        }
-    }
 
-    // For Closure compiler name-munging while keeping JSLint happy
-    function lookup(obj, name) {
-        return obj[name];
-    }
-    function put(obj, name, val) {
-        obj[name] = val;
-    }
+                options = options || {};
 
-    function extend(target) {
-        each(slice.call(arguments, 1), function () {
-            each(this, function (val, key) {
-                target[key] = val;
-            });
-        });
-
-        return target;
-    }
-
-    function getType(obj) {
-        return {}.toString.call(obj).match(/\[object ([\s\S]*)\]/)[1];
-    }
-
-    function isString(str) {
-        return typeof str === "string" || getType(str) === "String";
-    }
-
-    function isPlainObject(obj) {
-        return getType(obj) === "Object";
-    }
-
-    function isArray(str) {
-        return getType(str) === "Array";
-    }
-
-    function isFunction(str) {
-        return getType(str) === "Function";
-    }
-
-    function getBasePath(path) {
-        path = path.replace(/[^\/]+$/, "");
-
-        if (path.charAt(path.length - 1) !== "/") {
-            path += "/";
-        }
-
-        return path;
-    }
-
-    function implicitExtension(path) {
-        if (path.substr(path.length - 3) !== ".js") {
-            path += ".js";
-        }
-
-        return path;
-    }
-
-    function makePath(basePath, currentPath, path, config) {
-        var previousPath = "",
-            components;
-
-        if (!ROOT_REGEX.test(path)) {
-            components = lookup(config, "pathFilter")(path).split("/");
-
-            each(lookup(config, "paths"), function (to, from) {
-                if (components[0] === from) {
-                    components[0] = to;
-                }
-            });
-
-            path = components.join("/");
-        }
-
-        path = getBasePath(/^\.\.?\//.test(path) ? currentPath : basePath) + path.replace(ROOT_REGEX, "");
-
-        path = path.replace(/\/\.\//g, "/"); // Resolve same-directory symbols
-
-        // Resolve parent-directory symbols
-        while (previousPath !== path) {
-            previousPath = path;
-            path = path.replace(/[^\/]*\/\.\.\//, "");
-        }
-
-        return path;
-    }
-
-    function parse(arg1, arg2, arg3, arg4) {
-        var config,
-            path,
-            dependencies,
-            closure;
-
-        if (isPlainObject(arg1)) {
-            config = arg1;
-        } else if (isString(arg1)) {
-            path = arg1;
-        } else if (isArray(arg1)) {
-            dependencies = arg1;
-        } else if (isFunction(arg1)) {
-            closure = arg1;
-        }
-
-        if (isString(arg2)) {
-            path = arg2;
-        } else if (isArray(arg2)) {
-            dependencies = arg2;
-        } else if (isFunction(arg2)) {
-            closure = arg2;
-        }
-
-        if (isArray(arg3)) {
-            dependencies = arg3;
-        } else if (isFunction(arg3)) {
-            closure = arg3;
-        }
-
-        if (isFunction(arg4)) {
-            closure = arg4;
-        }
-
-        if (config && !path && !dependencies && !closure) {
-            closure = config;
-            config = null;
-        }
-
-        return {
-            config: config || {},
-            path: path || null,
-            dependencies: dependencies || [],
-            closure: closure || function () {}
-        };
-    }
-
-    function getModule(path, config) {
-        var result = null;
-
-        if (!modules.hasOwnProperty(path)) {
-            return null;
-        }
-
-        return lookup(config, "versionFilter")(modules[path], path, lookup(config, "versions")[path]);
-    }
-
-    function addModule(path, val) {
-        if (!modules[path]) {
-            modules[path] = [];
-        }
-
-        modules[path].push(val);
-    }
-
-    function depend(path, fetch, recheck) {
-        if (!pendings[path]) {
-            pendings[path] = [];
-
-            fetch(path);
-        }
-
-        if (recheck) {
-            pendings[path].push(recheck);
-        }
-    }
-
-    function ready(config, path, dependencies, closure, options) {
-        var fetched = false;
-
-        function processDependents(moduleValue) {
-            var callbacks;
-
-            // Caching may be explicitly disabled, eg. for scoped requires (which would otherwise
-            //  overwrite their container module)
-            if (options.cache !== false) {
-                addModule(path, moduleValue);
-
-                if (pendings[path]) {
-                    callbacks = pendings[path];
-
-                    delete pendings[path];
-
-                    each(callbacks, function (dependencyLoaded) {
-                        dependencyLoaded();
-                    });
-                }
-            }
-        }
-
-        function checkDependencies() {
-            var allResolved = true,
-                moduleValue = null,
-                args = [];
-
-            each(dependencies, function (dependencyPath) {
-                var fullPath = makePath(lookup(config, "baseUrl"), path, dependencyPath, config),
-                    result;
-
-                // Scoped require support
-                if (dependencyPath === "require") {
-                    args.push(function (arg1, arg2, arg3, arg4) {
-                        var args = parse(arg1, arg2, arg3, arg4);
-
-                        ready(extend({}, config, args.config), args.path || path, args.dependencies, args.closure, {
-                            cache: false
-                        });
-                    });
-                // Exports support
-                } else if (dependencyPath === "exports") {
-                    moduleValue = {};
-                    args.push(moduleValue);
-                } else {
-                    result = getModule(dependencyPath, config) || getModule(fullPath, config);
-
-                    if (result) {
-                        args.push(result.val);
-                    } else {
-                        if (!fetched) {
-                            depend(fullPath, function (path) {
-                                lookup(config, "fetch")(config, path, ready);
-                            }, checkDependencies);
+                if (has.call(obj, "length") && !options.keys) {
+                    for (key = 0, length = obj.length; key < length; key += 1) { // Keep JSLint happy with "+= 1"
+                        if (callback.call(obj[key], obj[key], key) === false) {
+                            break;
                         }
-
-                        allResolved = false;
+                    }
+                } else {
+                    for (key in obj) {
+                        if (obj.hasOwnProperty(key)) {
+                            if (callback.call(obj[key], obj[key], key) === false) {
+                                break;
+                            }
+                        }
                     }
                 }
-            });
+            },
 
-            fetched = true;
+            extend: function (target) {
+                util.each(slice.call(arguments, 1), function () {
+                    util.each(this, function (val, key) {
+                        target[key] = val;
+                    }, { keys: true });
+                });
 
-            if (allResolved) {
-                moduleValue = (isFunction(closure) ? closure.apply(global, args) : closure) || moduleValue;
+                return target;
+            },
 
-                processDependents(moduleValue);
-            }
-        }
+            getType: function (obj) {
+                return {}.toString.call(obj).match(/\[object ([\s\S]*)\]/)[1];
+            },
 
-        options = options || {};
+            global: global,
 
-        checkDependencies();
-    }
+            isArray: function (str) {
+                return util.getType(str) === "Array";
+            },
 
-    function makeRequire(parentConfig) {
-        return function (arg1, arg2, arg3, arg4) {
-            var args = parse(arg1, arg2, arg3, arg4),
-                config = extend({}, parentConfig, args.config);
+            isFunction: function (str) {
+                return util.getType(str) === "Function";
+            },
 
-            return require(config, args.path, args.dependencies, args.closure);
-        };
-    }
+            isPlainObject: function (obj) {
+                return util.getType(obj) === "Object";
+            },
 
-    function require(arg1, arg2, arg3, arg4) {
-        var args = parse(arg1, arg2, arg3, arg4),
-            config = extend({}, defaults, args.config);
-
-        ready(config, args.path || lookup(config, "baseUrl"), args.dependencies, args.closure);
-
-        return makeRequire(config);
-    }
-
-    function define(arg1, arg2, arg3, arg4) {
-        var args = parse(arg1, arg2, arg3, arg4),
-            config = extend({}, defaults, args.config);
-
-        if (args.path) {
-            ready(config, args.path, args.dependencies, args.closure);
-        } else {
-            lookup(config, "anonymous")(args);
-        }
-
-        return makeRequire(args.config);
-    }
-
-    extend(require, {
-        "config": function (config) {
-            if (config) {
-                // Extend the global config with the specified one
-                extend(defaults, config);
-
-                return makeRequire(defaults);
-            } else {
-                return defaults;
+            isString: function (str) {
+                return typeof str === "string" || util.getType(str) === "String";
             }
         },
-        "onError": function (msg) {
-            throw new Error(msg);
-        }
-    });
-
-    extend(define, {
-        // Publish support for the AMD pattern
-        "amd": {
-            "jQuery": true
-        }
-    });
-
-    // Exports
-    if (!lookup(global, "require")) {
-        extend(global, {
-            "require": require,
-            "define": define
-        });
-    }
-    if (!lookup(global, "requirejs")) {
-        put(global, "requirejs", require);
-    }
-
-    // Browser environment support
-    if (global.document) {
-        (function (document) {
-            var scripts = document.getElementsByTagName("script"),
-                head = scripts[0].parentNode,
-                on = head.addEventListener ? function (node, type, callback) {
-                    node.addEventListener(type, callback, false);
-                } : function (node, type, callback) {
-                    node.attachEvent("on" + type, callback);
-                },
-                off = head.removeEventListener ? function (node, type, callback) {
-                    node.removeEventListener(type, callback, false);
-                } : function (node, type, callback) {
-                    node.detachEvent("on" + type, callback);
-                },
-                useOnLoad = head.addEventListener && (!head.attachEvent || global.opera),
-                type = useOnLoad ? "load" : "readystatechange",
-                useDOMContentLoaded = has.call(global, "DOMContentLoaded"),
-                jQuery = lookup(global, "jQuery"),
-                anonymouses = [],
-                fetchScripts = {},
-                activeScript = null,
-                contextProperty = "__modularContext";
-
-            function gotModule(context, args) {
-                if (args) {
-                    context.ready(extend({}, context.config, args.config), args.path || context.path, args.dependencies, args.closure);
-                } else {
-                    context.ready({}, context.path, [], null);
-                }
-
-                head.removeChild(context.script);
+        Funnel = (function () {
+            function Funnel() {
+                this.doneCallbacks = [];
+                this.pending = 0;
             }
+            util.extend(Funnel.prototype, {
+                add: function (callback) {
+                    var funnel = this;
 
-            extend(defaults, {
-                "baseUrl": global.location.pathname,
-                "versionFilter": function (stack, path, version) {
-                    var val = stack[0];
+                    funnel.pending += 1;
 
-                    if (path === "jquery" && version) {
-                        val = null;
+                    return function () {
+                        var result = callback.apply(this, arguments);
 
-                        each(stack, function () {
-                            if (lookup(this(), "jquery") === version) {
-                                val = this;
-
-                                return false;
-                            }
-                        });
-                    }
-
-                    return {
-                        val: val
-                    };
-                },
-                // Overridable - called when a module needs to be loaded
-                "fetch": function (config, path, ready) {
-                    var script = document.createElement("script"),
-                        context = {
-                            config: config,
-                            path: path,
-                            ready: ready,
-                            script: script
-                        },
-                        time = 0;
-
-                    if (!useOnLoad) {
-                        put(script, contextProperty, context);
-                    }
-
-                    on(script, type, function checkLoaded() {
-                        var args;
-
-                        if (useOnLoad) {
-                            off(script, type, checkLoaded);
-
-                            args = anonymouses.pop();
-
-                            gotModule(context, args);
-                        } else if (/complete|loaded/.test(script.readyState) && lookup(script, contextProperty)) {
-                            if (time < 1000) {
-                                time += 50;
-
-                                global.setTimeout(checkLoaded, 50);
-                            } else {
-                                off(script, type, checkLoaded);
-
-                                gotModule(context, null);
-                                put(script, contextProperty, null);
-                                activeScript = null;
-                            }
-                        }
-                    });
-
-                    script.setAttribute("type", "text/javascript");
-                    script.setAttribute("src", implicitExtension(path));
-
-                    fetchScripts[path] = script;
-
-                    // IE in some cache states will execute script upon insertion
-                    activeScript = script;
-                    head.insertBefore(script, head.firstChild);
-                    activeScript = null;
-                },
-                "anonymous": function (args) {
-                    var context;
-
-                    if (useOnLoad) {
-                        anonymouses.push(args);
-                    } else {
-                        if (!activeScript) {
-                            // Not in a special IE cache state: need to do more work
-                            each(fetchScripts, function () {
-                                // Currently executing script will be "interactive"
-                                if (this.readyState === "interactive") {
-                                    activeScript = this;
-                                }
+                        funnel.pending -= 1;
+                        if (funnel.pending === 0) {
+                            util.each(funnel.doneCallbacks, function (callback) {
+                                callback();
                             });
                         }
 
-                        // Pull out context & remove from element to avoid memory leak
-                        context = lookup(activeScript, contextProperty);
-                        put(activeScript, contextProperty, null);
+                        return result;
+                    };
+                },
 
-                        activeScript = null;
-                        delete fetchScripts[context.path];
-
-                        gotModule(context, args);
+                done: function (callback) {
+                    if (this.pending === 0) {
+                        callback();
+                    } else {
+                        this.doneCallbacks.push(callback);
                     }
                 }
             });
 
-            each(scripts, function () {
-                var main = this.getAttribute("data-main");
+            return Funnel;
+        }()),
+        Module = (function () {
+            var UNDEFINED = 1,
+                TRANSPORTING = 2,
+                FILTERING = 3,
+                DEFINED = 4,
+                DEFERRED = 5,
+                LOADING = 6,
+                LOADED = 7;
 
-                if (main) {
-                    depend(main, function (path) {
-                        lookup(defaults, "fetch")({}, path, ready);
+            function Module(loader, id, value) {
+                this.config = {};
+                this.dependencies = [];
+                this.factory = null;
+                this.id = id || null;
+                this.loader = loader;
+                this.mode = value ? LOADED : UNDEFINED;
+                this.requesterQueue = [];
+                this.value = value || null;
+                this.whenLoaded = null;
+            }
+            util.extend(Module.prototype, {
+                define: function (config, dependencyIDs, factory, callback) {
+                    var loader = this.loader,
+                        module = this,
+                        exports = {},
+                        dependencyConfigs = {},
+                        idFilter,
+                        funnel = new Funnel();
+
+                    util.extend(module.config, config);
+                    idFilter = get(module.config, "idFilter") || function (id, callback) {
+                        callback(id);
+                    };
+
+                    util.each(dependencyIDs, function (dependencyID, dependencyIndex) {
+                        var dependency;
+
+                        dependencyID = loader.resolveDependencyID(dependencyID, module.id, get(module.config, "paths"), get(module.config, "exclude"));
+
+                        if (dependencyID === "require") {
+                            module.dependencies[dependencyIndex] = new Module(loader, null, function (arg1, arg2, arg3, arg4) {
+                                var args = loader.parseArgs(arg1, arg2, arg3, arg4),
+                                    config = util.extend({}, module.config, args.config);
+                                loader.require(config, args.id || module.id, args.dependencyIDs, args.factory);
+                            });
+                        } else if (dependencyID === "exports") {
+                            module.value = exports;
+                            module.dependencies[dependencyIndex] = new Module(loader, null, exports);
+                        } else if (dependencyID === "module") {
+                            module.dependencies[dependencyIndex] = new Module(loader, null, {
+                                id: module.id,
+                                uri: module.id,
+                                config: module.config,
+                                exports: exports,
+                                defer: function () {
+                                    module.mode = DEFERRED;
+                                    return function (value) {
+                                        module.whenLoaded(value);
+                                    };
+                                }
+                            });
+                        } else {
+                            idFilter(dependencyID, funnel.add(function (dependencyID) {
+                                dependency = loader.getModule(dependencyID) || loader.createModule(dependencyID);
+                                module.dependencies[dependencyIndex] = dependency;
+                                util.extend(dependency.config, module.config);
+                            }));
+                        }
                     });
+
+                    module.factory = factory;
+
+                    module.mode = FILTERING;
+
+                    funnel.done(function () {
+                        module.mode = DEFINED;
+                        if (callback) {
+                            callback();
+                        }
+                    });
+                },
+
+                getID: function () {
+                    return this.id;
+                },
+
+                getValue: function () {
+                    return this.value;
+                },
+
+                isDeferred: function () {
+                    return this.mode === DEFERRED;
+                },
+
+                isDefined: function () {
+                    return this.mode >= FILTERING;
+                },
+
+                isLoaded: function () {
+                    return this.mode === LOADED;
+                },
+
+                load: function (callback) {
+                    var loader = this.loader,
+                        module = this;
+
+                    function load(dependencyValues, value, callback) {
+                        module.mode = LOADED;
+                        module.value = value || module.value;
+
+                        util.each(module.requesterQueue, function (callback) {
+                            callback(module.value);
+                        });
+                        module.requesterQueue.length = 0;
+
+                        if (callback) {
+                            callback(module.value);
+                        }
+                    }
+
+                    function getModuleValue(dependencyValues, factory, callback) {
+                        var value = util.isFunction(factory) ?
+                                    factory.apply(global, dependencyValues) :
+                                    factory;
+
+                        if (module.isDeferred()) {
+                            module.whenLoaded = function (value) {
+                                module.whenLoaded = null;
+                                load(dependencyValues, value, callback);
+                            };
+                        } else {
+                            load(dependencyValues, value, callback);
+                        }
+                    }
+
+                    function filter(dependencyValues, callback) {
+                        var factoryFilter = get(module.config, "factoryFilter") || function (args) {
+                            args.callback(args.factory);
+                        };
+
+                        factoryFilter({
+                            callback: function (factory) {
+                                getModuleValue(dependencyValues, factory, callback);
+                            },
+                            dependencyValues: dependencyValues,
+                            factory: module.factory,
+                            id: module.getID(),
+                            loader: loader
+                        });
+                    }
+
+                    function loadDependencies(callback) {
+                        var funnel = new Funnel(),
+                            dependencyValues = [];
+
+                        module.mode = LOADING;
+
+                        util.each(module.dependencies, function (dependency, index) {
+                            dependency.load(funnel.add(function (value) {
+                                // These may load in any order, so don't just .push() them
+                                dependencyValues[index] = value;
+                            }));
+                        });
+
+                        funnel.done(function () {
+                            filter(dependencyValues, callback);
+                        });
+                    }
+
+                    function completeDefine(define) {
+                        if (!define) {
+                            define = {
+                                config: {},
+                                dependencyIDs: [],
+                                factory: null
+                            };
+                        }
+
+                        module.define(define.config, define.dependencyIDs, define.factory, function () {
+                            loadDependencies();
+                        });
+                    }
+
+                    if (module.mode === UNDEFINED) {
+                        if (callback) {
+                            module.requesterQueue.push(callback);
+                        }
+                        module.mode = TRANSPORTING;
+
+                        util.each(loader.transports, function (handler) {
+                            if (handler(completeDefine, module) !== false) {
+                                return false;
+                            }
+                        });
+
+                        //if (module.mode === UNDEFINED) {
+                        //    throw new Error("No transport available for '" + module.id + "'");
+                        //}
+                    } else if (module.mode === TRANSPORTING || module.mode === LOADING) {
+                        if (callback) {
+                            module.requesterQueue.push(callback);
+                        }
+                    } else if (module.mode === DEFINED) {
+                        loadDependencies(callback);
+                    } else if (module.mode === LOADED) {
+                        if (callback) {
+                            callback(module.value);
+                        }
+                    }
                 }
             });
 
-            if (!getModule("jquery", defaults) && jQuery) {
-                addModule("jquery", jQuery);
+            return Module;
+        }()),
+        Modular = (function () {
+            function Modular() {
+                this.anonymousDefines = [];
+                this.config = {};
+                this.modules = {};
+                this.transports = [];
+
+                // Expose Modular class itself to dependents
+                this.define("Modular", function () {
+                    return Modular;
+                });
+
+                // Expose this instance of Modular to its dependents
+                this.define("modular", this);
             }
-        }(global.document));
-    }
+            util.extend(Modular.prototype, {
+                addTransport: function (handler) {
+                    this.transports.push(handler);
+                },
+
+                configure: function (config) {
+                    if (config) {
+                        util.extend(this.config, config);
+                    } else {
+                        return this.config;
+                    }
+                },
+
+                createDefiner: function () {
+                    var loader = this;
+
+                    function define(arg1, arg2, arg3, arg4) {
+                        return loader.define(arg1, arg2, arg3, arg4);
+                    }
+
+                    // Publish support for the AMD pattern
+                    util.extend(define, {
+                        "amd": {
+                            //"jQuery": true
+                        }
+                    });
+
+                    return define;
+                },
+
+                createModule: function (id) {
+                    var module = new Module(this, id);
+
+                    this.modules[id] = module;
+
+                    return module;
+                },
+
+                createRequirer: function () {
+                    var loader = this;
+
+                    function require(arg1, arg2, arg3, arg4) {
+                        return loader.require(arg1, arg2, arg3, arg4);
+                    }
+
+                    util.extend(require, {
+                        config: function (config) {
+                            return loader.configure(config);
+                        }
+                    });
+
+                    return require;
+                },
+
+                define: function (arg1, arg2, arg3, arg4) {
+                    var args = this.parseArgs(arg1, arg2, arg3, arg4),
+                        id = args.id,
+                        module;
+
+                    if (id === null) {
+                        this.anonymousDefines.push(args);
+                    } else {
+                        module = this.getModule(id);
+                        if (module) {
+                            if (module.isDefined()) {
+                                throw new Error("Module '" + id + "' has already been defined");
+                            }
+                        } else {
+                            module = this.createModule(id);
+                        }
+
+                        module.define(args.config, args.dependencyIDs, args.factory);
+                    }
+                },
+
+                getModule: function (id) {
+                    return this.modules[id];
+                },
+
+                parseArgs: function (arg1, arg2, arg3, arg4) {
+                    var config = null,
+                        id = null,
+                        dependencyIDs = null,
+                        factory = null;
+
+                    if (util.isPlainObject(arg1)) {
+                        config = arg1;
+                    } else if (util.isString(arg1)) {
+                        id = arg1;
+                    } else if (util.isArray(arg1)) {
+                        dependencyIDs = arg1;
+                    } else if (util.isFunction(arg1)) {
+                        factory = arg1;
+                    }
+
+                    if (util.isString(arg2)) {
+                        id = arg2;
+                    } else if (util.isArray(arg2)) {
+                        dependencyIDs = arg2;
+                    } else if (util.isFunction(arg2) || util.isPlainObject(arg2)) {
+                        factory = arg2;
+                    }
+
+                    if (util.isArray(arg3)) {
+                        dependencyIDs = arg3;
+                    } else if (util.isFunction(arg3) || util.isPlainObject(arg3)) {
+                        factory = arg3;
+                    }
+
+                    if (util.isFunction(arg4)) {
+                        factory = arg4;
+                    }
+
+                    // Special case: only an object passed - use as factory
+                    if (config && !id && !dependencyIDs && !factory) {
+                        factory = config;
+                        config = null;
+                    }
+
+                    // Special case: only an array passed - use as factory
+                    if (!config && dependencyIDs && !id && !factory) {
+                        factory = dependencyIDs;
+                        dependencyIDs = null;
+                    }
+
+                    return {
+                        config: util.extend({}, this.config, config),
+                        id: id,
+                        dependencyIDs: dependencyIDs || [],
+                        factory: factory
+                    };
+                },
+
+                popAnonymousDefine: function () {
+                    return this.anonymousDefines.pop();
+                },
+
+                resolveDependencyID: function (id, dependentID, mappings, exclude) {
+                    var previousID;
+
+                    if (!util.isString(id)) {
+                        throw new Error("Invalid dependency id");
+                    }
+
+                    if (exclude && exclude.test(id)) {
+                        return id;
+                    }
+
+                    if (/^\.\.?\//.test(id) && dependentID) {
+                        id = dependentID.replace(/[^\/]+$/, "") + id;
+                    }
+
+                    // Resolve parent-directory terms
+                    while (previousID !== id) {
+                        previousID = id;
+                        id = id.replace(/(^|\/)(?!\.\.)([^\/]*)\/\.\.\//, "$1");
+                    }
+
+                    if (mappings && !/^\.\.?\//.test(id)) {
+                        id = (function () {
+                            var terms = id.split("/"),
+                                portion,
+                                index;
+
+                            if (mappings[id]) {
+                                return mappings[id];
+                            }
+
+                            for (index = terms.length - 1; index >= 0; index -= 1) {
+                                portion = terms.slice(0, index).join("/");
+                                if (mappings[portion] || mappings[portion + "/"]) {
+                                    return (mappings[portion] || mappings[portion + "/"]).replace(/\/$/, "") + "/" + terms.slice(index).join("/");
+                                }
+                            }
+                            return id;
+                        }());
+                    }
+
+                    id = id.replace(/(^|\/)(\.?\/)+/g, "$1").replace(/^\//, ""); // Resolve same-directory terms
+
+                    return id;
+                },
+
+                require: function (arg1, arg2, arg3, arg4) {
+                    var args = this.parseArgs(arg1, arg2, arg3, arg4),
+                        id = args.id,
+                        module = new Module(this, id);
+
+                    module.define(args.config, args.dependencyIDs, args.factory, function () {
+                        module.load();
+                    });
+                },
+
+                util: util
+            });
+
+            return Modular;
+        }()),
+        modular = new Modular();
+
+    (function () {
+        var isNode = (typeof require !== "undefined" && typeof module !== "undefined");
+
+        function makePath(baseURI, id) {
+            if (/^(https?:)?\/\//.test(id)) {
+                return id;
+            }
+
+            return (baseURI ? baseURI.replace(/\/$/, "") + "/" : "") + id.replace(/\.js$/, "") + ".js";
+        }
+
+        // Don't override an existing AMD loader: instead, register the Modular instance
+        if (global.define) {
+            global.define(modular);
+        } else {
+            global.define = modular.createDefiner();
+
+            if (isNode) {
+                module.exports = modular;
+
+                (function (nodeRequire) {
+                    var fs = nodeRequire("fs"),
+                        // Expose Modular require() to loaded script
+                        require = modular.createRequirer();
+
+                    modular.addTransport(function (callback, module) {
+                        var path = fs.realpathSync(makePath(get(module.config, "baseUrl"), module.getID()));
+
+                        fs.readFile(path, "utf8", function (error, code) {
+                            var exec = get(module.config, "exec") || function (args) {
+                                /*jslint evil:true */
+                                eval(args.code);
+                            };
+
+                            if (error) {
+                                throw error;
+                            }
+
+                            exec({
+                                callback: function () {
+                                    callback(modular.popAnonymousDefine());
+                                },
+                                code: code,
+                                path: path
+                            });
+                        });
+                    });
+                }(require));
+            } else {
+                global.require = modular.createRequirer();
+
+                // Browser transport
+                if (global === global.window) {
+                    modular.configure({
+                        "baseUrl": global.location.pathname.replace(/\/?[^\/]+$/, ""),
+                        "exclude": /^(https?:)?\/\//
+                    });
+
+                    modular.addTransport(function (callback, module) {
+                        var script = global.document.createElement("script"),
+                            head = global.document.getElementsByTagName("head")[0],
+                            uri = makePath(get(module.config, "baseUrl"), module.getID());
+
+                        if (get(module.config, "cache") === false) {
+                            uri += "?__r=" + Math.random();
+                        }
+
+                        script.onload = function () {
+                            callback(modular.popAnonymousDefine());
+                        };
+                        script.type = "text/javascript";
+                        script.src = uri;
+                        head.insertBefore(script, head.firstChild);
+                    });
+
+                    util.each(global.document.getElementsByTagName("script"), function (script) {
+                        var main = script.getAttribute("data-main");
+
+                        if (main) {
+                            modular.require(".", [main]);
+                            return false;
+                        }
+                    });
+                }
+            }
+        }
+    }());
 }());
