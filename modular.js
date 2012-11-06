@@ -582,11 +582,25 @@
                         require = modular.createRequirer();
 
                     modular.addTransport(function (callback, module) {
-                        var path = makePath(get(module.config, "baseUrl"), module.getID());
-                        fs.readFile(path, "utf8", function (error, data) {
-                            /*jslint evil: true */
-                            eval(data);
-                            callback(modular.popAnonymousDefine());
+                        var path = fs.realpathSync(makePath(get(module.config, "baseUrl"), module.getID()));
+
+                        fs.readFile(path, "utf8", function (error, code) {
+                            var exec = get(module.config, "exec") || function (args) {
+                                /*jslint evil:true */
+                                eval(args.code);
+                            };
+
+                            if (error) {
+                                throw error;
+                            }
+
+                            exec({
+                                callback: function () {
+                                    callback(modular.popAnonymousDefine());
+                                },
+                                code: code,
+                                path: path
+                            });
                         });
                     });
                 }(require));
