@@ -133,7 +133,8 @@
                 FILTERING = 3,
                 DEFINED = 4,
                 DEFERRED = 5,
-                LOADED = 6;
+                LOADING = 6,
+                LOADED = 7;
 
             function Module(loader, id, value) {
                 this.config = {};
@@ -142,7 +143,7 @@
                 this.id = id || null;
                 this.loader = loader;
                 this.mode = value ? LOADED : UNDEFINED;
-                this.requesterQueue = null;
+                this.requesterQueue = [];
                 this.value = value || null;
                 this.whenLoaded = null;
             }
@@ -236,6 +237,11 @@
                         module.mode = LOADED;
                         module.value = value || module.value;
 
+                        util.each(module.requesterQueue, function (callback) {
+                            callback(module.value);
+                        });
+                        module.requesterQueue.length = 0;
+
                         if (callback) {
                             callback(module.value);
                         }
@@ -276,6 +282,8 @@
                         var funnel = new Funnel(),
                             dependencyValues = [];
 
+                        module.mode = LOADING;
+
                         util.each(module.dependencies, function (dependency, index) {
                             dependency.load(funnel.add(function (value) {
                                 // These may load in any order, so don't just .push() them
@@ -298,17 +306,14 @@
                         }
 
                         module.define(define.config, define.dependencyIDs, define.factory, function () {
-                            loadDependencies(function (value) {
-                                util.each(module.requesterQueue, function (callback) {
-                                    callback(value);
-                                });
-                                module.requesterQueue = null;
-                            });
+                            loadDependencies();
                         });
                     }
 
                     if (module.mode === UNDEFINED) {
-                        module.requesterQueue = callback ? [callback] : [];
+                        if (callback) {
+                            module.requesterQueue.push(callback);
+                        }
                         module.mode = TRANSPORTING;
 
                         util.each(loader.transports, function (handler) {
@@ -320,7 +325,7 @@
                         //if (module.mode === UNDEFINED) {
                         //    throw new Error("No transport available for '" + module.id + "'");
                         //}
-                    } else if (module.mode === TRANSPORTING) {
+                    } else if (module.mode === TRANSPORTING || module.mode === LOADING) {
                         if (callback) {
                             module.requesterQueue.push(callback);
                         }

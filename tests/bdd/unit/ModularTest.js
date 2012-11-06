@@ -1,8 +1,10 @@
 define([
     "vendor/chai/chai",
+    "vendor/sinon/sinon",
     "root/modular"
 ], function (
     chai,
+    sinon,
     modular
 ) {
     "use strict";
@@ -91,6 +93,44 @@ define([
                     expect(importedMysticism).to.equal(null);
                     done();
                 });
+            });
+
+            it("should call factory for all modules dependent on a module whose dependencies load later", function () {
+                var callback = sinon.spy(),
+                    defineCallback = null;
+
+                loader.addTransport(function (callback) {
+                    defineCallback = callback;
+                });
+
+                loader.define("mopeds/leathers", ["slow/loader"], {});
+
+                loader.require(["mopeds/leathers"], callback);
+                loader.require(["mopeds/leathers"], callback);
+
+                loader.define({});
+                defineCallback(loader.popAnonymousDefine());
+
+                expect(callback).to.have.been.calledTwice;
+            });
+
+            it("should only call factory once when a module is requested by multiple other modules after being defined but before its dependencies have loaded", function () {
+                var factory = sinon.spy(),
+                    defineCallback = null;
+
+                loader.addTransport(function (callback) {
+                    defineCallback = callback;
+                });
+
+                loader.define("mods/rockers", ["slow/loading/module"], factory);
+
+                loader.require(["mods/rockers"], function () {});
+                loader.require(["mods/rockers"], function () {});
+
+                loader.define({});
+                defineCallback(loader.popAnonymousDefine());
+
+                expect(factory).to.have.been.calledOnce;
             });
         });
 
