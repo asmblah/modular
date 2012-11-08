@@ -588,6 +588,7 @@
                             var exec = get(module.config, "exec") || function (args) {
                                 /*jslint evil:true */
                                 eval(args.code);
+                                args.callback();
                             };
 
                             if (error) {
