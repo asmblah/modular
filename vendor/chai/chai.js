@@ -175,8 +175,7 @@
      */
 
     function Assertion (obj, msg, stack) {
-      var assertion = Object.create(null);
-      assertion.__proto__ = Assertion.prototype;
+      var assertion = Object.create(Assertion.prototype, {});
 
       flag(assertion, 'ssfi', stack || arguments.callee);
       flag(assertion, 'object', obj);
@@ -219,7 +218,7 @@
       util.overwriteMethod(this.prototype, name, fn);
     };
 
-    Assertion.prototype = Object.create(null);
+    Assertion.prototype = Object.create(Object.prototype, {});
 
     /*!
      * ### .assert(expression, message, negateMessage, expected, actual)

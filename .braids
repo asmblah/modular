@@ -2,7 +2,7 @@
 vendor/chai: 
   branch: master
   remote: master/braid/vendor/chai
-  revision: ea2ea9f4a13f86f08d0e0fe2809d266de8c2f04e
+  revision: 9872815f8acebd4908d48fe4bd827ff70d45c30c
   squashed: true
   type: git
   url: git://github.com/asmblah/chai.git
