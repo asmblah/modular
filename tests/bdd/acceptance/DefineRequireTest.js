@@ -320,6 +320,24 @@ define([
                 callback(value);
                 expect(spy.calledWith(value)).to.be.ok;
             });
+
+            it("should correctly handle callback being called immediately", function () {
+                var spy = sinon.spy();
+
+                loader.define("ImmediateFuture", [
+                    "module"
+                ], function (
+                    module
+                ) {
+                    module.defer()();
+                });
+
+                loader.require([
+                    "ImmediateFuture"
+                ], spy);
+
+                expect(spy).to.have.been.calledOnce;
+            });
         });
 
         describe("ID mapping", function () {

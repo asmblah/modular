@@ -248,16 +248,19 @@
                     }
 
                     function getModuleValue(dependencyValues, factory, callback) {
-                        var value = util.isFunction(factory) ?
-                                    factory.apply(global, dependencyValues) :
-                                    factory;
+                        var value;
 
-                        if (module.isDeferred()) {
-                            module.whenLoaded = function (value) {
-                                module.whenLoaded = null;
-                                load(dependencyValues, value, callback);
-                            };
-                        } else {
+                        module.whenLoaded = function (value) {
+                            module.whenLoaded = null;
+                            load(dependencyValues, value, callback);
+                        };
+
+                        value = util.isFunction(factory) ?
+                                factory.apply(global, dependencyValues) :
+                                factory;
+
+                        if (!module.isDeferred() && !module.isLoaded()) {
+                            module.whenLoaded = null;
                             load(dependencyValues, value, callback);
                         }
                     }
