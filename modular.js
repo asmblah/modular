@@ -619,8 +619,12 @@
                         if (useInteractiveScript) {
                             defineAnonymous = function (args) {
                                 util.each(document.getElementsByTagName("script"), function (script) {
+                                    var callback;
                                     if (script.readyState === "interactive") {
-                                        callbacks[script.uniqueID](args);
+                                        callback = callbacks[script.uniqueID];
+                                        if (callback) {
+                                            callback(args);
+                                        }
                                         return false;
                                     }
                                 });
