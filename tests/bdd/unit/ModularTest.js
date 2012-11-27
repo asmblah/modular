@@ -27,25 +27,31 @@ define([
 
         describe("addTransport()", function () {
             it("should support a simple script-tag-based dynamic loader", function (done) {
-                var Magic = {};
+                var lastDefine,
+                    Magic = {};
 
-                loader.addTransport(function (callback, module) {
-                    var script = { nodeName: "script" },
-                        head = {
-                            appendChild: function (node) {
-                                loader.define(Magic); // Simulate script execution after download
-                                setTimeout(function () {
-                                    script.onload(); // Simulate script.onload() event firing some time later
-                                });
-                            }
+                loader.configure({
+                    "defineAnonymous": function (args) {
+                        lastDefine = args;
+                    },
+                    "transport": function (callback, module) {
+                        var script = { nodeName: "script" },
+                            head = {
+                                appendChild: function (node) {
+                                    loader.define(Magic); // Simulate script execution after download
+                                    setTimeout(function () {
+                                        script.onload(); // Simulate script.onload() event firing some time later
+                                    });
+                                }
+                            };
+
+                        script.onload = function () {
+                            callback(lastDefine);
                         };
-
-                    script.onload = function () {
-                        callback(loader.popAnonymousDefine());
-                    };
-                    script.type = "text/javascript";
-                    script.src = module.getID().replace(/\.js/, "") + ".js";
-                    head.appendChild(script);
+                        script.type = "text/javascript";
+                        script.src = module.getID().replace(/\.js/, "") + ".js";
+                        head.appendChild(script);
+                    }
                 });
 
                 loader.require([
@@ -59,13 +65,19 @@ define([
             });
 
             it("should support dependencies being loaded asynchronously", function (done) {
-                var mystical = {};
+                var lastDefine,
+                    mystical = {};
 
-                loader.addTransport(function (callback) {
-                    // Just do a simple test by breaking the call stack
-                    setTimeout(function () {
-                        callback(loader.popAnonymousDefine());
-                    });
+                loader.configure({
+                    "defineAnonymous": function (args) {
+                        lastDefine = args;
+                    },
+                    "transport": function (callback) {
+                        // Just do a simple test by breaking the call stack
+                        setTimeout(function () {
+                            callback(lastDefine);
+                        });
+                    }
                 });
 
                 loader.define(mystical);
@@ -81,8 +93,15 @@ define([
             });
 
             it("should support importing modules that don't call define(...)", function (done) {
-                loader.addTransport(function (callback) {
-                    callback(loader.popAnonymousDefine());
+                var lastDefine;
+
+                loader.configure({
+                    "defineAnonymous": function (args) {
+                        lastDefine = args;
+                    },
+                    "transport": function (callback) {
+                        callback(lastDefine);
+                    }
                 });
 
                 loader.require([
@@ -97,10 +116,16 @@ define([
 
             it("should call factory for all modules dependent on a module whose dependencies load later", function () {
                 var callback = sinon.spy(),
-                    defineCallback = null;
+                    defineCallback = null,
+                    lastDefine;
 
-                loader.addTransport(function (callback) {
-                    defineCallback = callback;
+                loader.configure({
+                    "defineAnonymous": function (args) {
+                        lastDefine = args;
+                    },
+                    "transport": function (callback) {
+                        defineCallback = callback;
+                    }
                 });
 
                 loader.define("mopeds/leathers", ["slow/loader"], {});
@@ -109,17 +134,23 @@ define([
                 loader.require(["mopeds/leathers"], callback);
 
                 loader.define({});
-                defineCallback(loader.popAnonymousDefine());
+                defineCallback(lastDefine);
 
                 expect(callback).to.have.been.calledTwice;
             });
 
             it("should only call factory once when a module is requested by multiple other modules after being defined but before its dependencies have loaded", function () {
                 var factory = sinon.spy(),
-                    defineCallback = null;
+                    defineCallback = null,
+                    lastDefine;
 
-                loader.addTransport(function (callback) {
-                    defineCallback = callback;
+                loader.configure({
+                    "defineAnonymous": function (args) {
+                        lastDefine = args;
+                    },
+                    "transport": function (callback) {
+                        defineCallback = callback;
+                    }
                 });
 
                 loader.define("mods/rockers", ["slow/loading/module"], factory);
@@ -128,7 +159,7 @@ define([
                 loader.require(["mods/rockers"], function () {});
 
                 loader.define({});
-                defineCallback(loader.popAnonymousDefine());
+                defineCallback(lastDefine);
 
                 expect(factory).to.have.been.calledOnce;
             });

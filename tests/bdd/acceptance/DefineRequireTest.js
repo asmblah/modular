@@ -41,12 +41,12 @@ define([
             expect(loader.getModule("hooman").getValue()).to.equal(null);
         });
 
-        it("should push an anonymous module with object as value if just passed an object", function () {
+        it("should do nothing when no transport defined and defining an anonymous module with just an object", function () {
             var value = { name: "Mr. Hyde" };
 
-            loader.define(value);
-
-            expect(loader.popAnonymousDefine().factory).to.equal(value);
+            expect(function () {
+                loader.define(value);
+            }).to.not.Throw();
         });
 
         it("should throw an error if attempting to define a module with an id that is already defined", function () {
@@ -92,10 +92,7 @@ define([
             ], function (
                 module
             ) {
-                expect(module.config).to.deep.equal({
-                    "parent": "is-here",
-                    "child": "is-there"
-                });
+                expect(module.config["parent"]).to.equal("is-here");
                 done();
             });
 

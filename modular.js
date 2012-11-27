@@ -50,7 +50,7 @@
                     }
                 } else {
                     for (key in obj) {
-                        if (obj.hasOwnProperty(key)) {
+                        if (has.call(obj, key)) {
                             if (callback.call(obj[key], obj[key], key) === false) {
                                 break;
                             }
@@ -60,8 +60,8 @@
             },
 
             extend: function (target) {
-                util.each(slice.call(arguments, 1), function () {
-                    util.each(this, function (val, key) {
+                util.each(slice.call(arguments, 1), function (obj) {
+                    util.each(obj, function (val, key) {
                         target[key] = val;
                     }, { keys: true });
                 });
@@ -84,7 +84,7 @@
             },
 
             isPlainObject: function (obj) {
-                return util.getType(obj) === "Object";
+                return util.getType(obj) === "Object" && typeof obj !== "undefined";
             },
 
             isString: function (str) {
@@ -136,8 +136,8 @@
                 LOADING = 6,
                 LOADED = 7;
 
-            function Module(loader, id, value) {
-                this.config = {};
+            function Module(loader, config, id, value) {
+                this.config = util.extend({}, config);
                 this.dependencies = [];
                 this.factory = null;
                 this.id = id || null;
@@ -157,9 +157,7 @@
                         funnel = new Funnel();
 
                     util.extend(module.config, config);
-                    idFilter = get(module.config, "idFilter") || function (id, callback) {
-                        callback(id);
-                    };
+                    idFilter = get(module.config, "idFilter");
 
                     util.each(dependencyIDs, function (dependencyID, dependencyIndex) {
                         var dependency;
@@ -167,16 +165,16 @@
                         dependencyID = loader.resolveDependencyID(dependencyID, module.id, get(module.config, "paths"), get(module.config, "exclude"));
 
                         if (dependencyID === "require") {
-                            module.dependencies[dependencyIndex] = new Module(loader, null, function (arg1, arg2, arg3, arg4) {
+                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, function (arg1, arg2, arg3, arg4) {
                                 var args = loader.parseArgs(arg1, arg2, arg3, arg4),
                                     config = util.extend({}, module.config, args.config);
                                 loader.require(config, args.id || module.id, args.dependencyIDs, args.factory);
                             });
                         } else if (dependencyID === "exports") {
                             module.value = exports;
-                            module.dependencies[dependencyIndex] = new Module(loader, null, exports);
+                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, exports);
                         } else if (dependencyID === "module") {
-                            module.dependencies[dependencyIndex] = new Module(loader, null, {
+                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, {
                                 id: module.id,
                                 uri: module.id,
                                 config: module.config,
@@ -190,7 +188,7 @@
                             });
                         } else {
                             idFilter(dependencyID, funnel.add(function (dependencyID) {
-                                dependency = loader.getModule(dependencyID) || loader.createModule(dependencyID);
+                                dependency = loader.getModule(dependencyID) || loader.createModule(dependencyID, module.config);
                                 module.dependencies[dependencyIndex] = dependency;
                                 util.extend(dependency.config, module.config);
                             }));
@@ -266,9 +264,7 @@
                     }
 
                     function filter(dependencyValues, callback) {
-                        var factoryFilter = get(module.config, "factoryFilter") || function (args) {
-                            args.callback(args.factory);
-                        };
+                        var factoryFilter = get(module.config, "factoryFilter");
 
                         factoryFilter({
                             callback: function (factory) {
@@ -319,15 +315,7 @@
                         }
                         module.mode = TRANSPORTING;
 
-                        util.each(loader.transports, function (handler) {
-                            if (handler(completeDefine, module) !== false) {
-                                return false;
-                            }
-                        });
-
-                        //if (module.mode === UNDEFINED) {
-                        //    throw new Error("No transport available for '" + module.id + "'");
-                        //}
+                        get(module.config, "transport")(completeDefine, module);
                     } else if (module.mode === TRANSPORTING || module.mode === LOADING) {
                         if (callback) {
                             module.requesterQueue.push(callback);
@@ -346,10 +334,19 @@
         }()),
         Modular = (function () {
             function Modular() {
-                this.anonymousDefines = [];
-                this.config = {};
+                this.config = {
+                    "baseUrl": "",
+                    "defineAnonymous": function (args) {},
+                    "exclude": /(?!)/,
+                    "factoryFilter": function (args) {
+                        args.callback(args.factory);
+                    },
+                    "idFilter": function (id, callback) {
+                        callback(id);
+                    },
+                    "transport": function (callback, module) {}
+                };
                 this.modules = {};
-                this.transports = [];
 
                 // Expose Modular class itself to dependents
                 this.define("Modular", function () {
@@ -360,10 +357,6 @@
                 this.define("modular", this);
             }
             util.extend(Modular.prototype, {
-                addTransport: function (handler) {
-                    this.transports.push(handler);
-                },
-
                 configure: function (config) {
                     if (config) {
                         util.extend(this.config, config);
@@ -389,8 +382,8 @@
                     return define;
                 },
 
-                createModule: function (id) {
-                    var module = new Module(this, id);
+                createModule: function (id, config) {
+                    var module = new Module(this, config, id);
 
                     this.modules[id] = module;
 
@@ -419,7 +412,7 @@
                         module;
 
                     if (id === null) {
-                        this.anonymousDefines.push(args);
+                        get(args.config, "defineAnonymous")(args);
                     } else {
                         module = this.getModule(id);
                         if (module) {
@@ -427,7 +420,7 @@
                                 throw new Error("Module '" + id + "' has already been defined");
                             }
                         } else {
-                            module = this.createModule(id);
+                            module = this.createModule(id, args.config);
                         }
 
                         module.define(args.config, args.dependencyIDs, args.factory);
@@ -492,10 +485,6 @@
                     };
                 },
 
-                popAnonymousDefine: function () {
-                    return this.anonymousDefines.pop();
-                },
-
                 resolveDependencyID: function (id, dependentID, mappings, exclude) {
                     var previousID;
 
@@ -545,7 +534,7 @@
                 require: function (arg1, arg2, arg3, arg4) {
                     var args = this.parseArgs(arg1, arg2, arg3, arg4),
                         id = args.id,
-                        module = new Module(this, id);
+                        module = new Module(this, args.config, id);
 
                     module.define(args.config, args.dependencyIDs, args.factory, function () {
                         module.load();
@@ -580,60 +569,90 @@
                 module.exports = modular;
 
                 (function (nodeRequire) {
-                    var fs = nodeRequire("fs"),
+                    var anonymousDefine,
+                        fs = nodeRequire("fs"),
                         // Expose Modular require() to loaded script
                         require = modular.createRequirer();
 
-                    modular.addTransport(function (callback, module) {
-                        var path = fs.realpathSync(makePath(get(module.config, "baseUrl"), module.getID()));
+                    modular.configure({
+                        "defineAnonymous": function (args) {
+                            anonymousDefine = args;
+                        },
+                        "exec": function (args) {
+                            /*jslint evil:true */
+                            eval(args.code);
+                            args.callback();
+                        },
+                        "transport": function (callback, module) {
+                            var path = fs.realpathSync(makePath(get(module.config, "baseUrl"), module.getID()));
 
-                        fs.readFile(path, "utf8", function (error, code) {
-                            var exec = get(module.config, "exec") || function (args) {
-                                /*jslint evil:true */
-                                eval(args.code);
-                                args.callback();
-                            };
+                            fs.readFile(path, "utf8", function (error, code) {
+                                if (error) {
+                                    throw error;
+                                }
 
-                            if (error) {
-                                throw error;
-                            }
-
-                            exec({
-                                callback: function () {
-                                    callback(modular.popAnonymousDefine());
-                                },
-                                code: code,
-                                path: path
+                                get(module.config, "exec")({
+                                    callback: function () {
+                                        callback(anonymousDefine);
+                                    },
+                                    code: code,
+                                    path: path
+                                });
                             });
-                        });
+                        }
                     });
                 }(require));
             } else {
                 global.require = modular.createRequirer();
 
                 // Browser transport
-                if (global === global.window) {
-                    modular.configure({
-                        "baseUrl": global.location.pathname.replace(/\/?[^\/]+$/, ""),
-                        "exclude": /^(https?:)?\/\//
-                    });
+                if (global.window && global.document) {
+                    (function (document) {
+                        var anonymousDefine,
+                            callbacks = {},
+                            defineAnonymous = function (args) {
+                                anonymousDefine = args;
+                            },
+                            head = document.getElementsByTagName("head")[0],
+                            useInteractiveScript = has.call(document, "uniqueID");
 
-                    modular.addTransport(function (callback, module) {
-                        var script = global.document.createElement("script"),
-                            head = global.document.getElementsByTagName("head")[0],
-                            uri = makePath(get(module.config, "baseUrl"), module.getID());
-
-                        if (get(module.config, "cache") === false) {
-                            uri += "?__r=" + Math.random();
+                        if (useInteractiveScript) {
+                            defineAnonymous = function (args) {
+                                util.each(document.getElementsByTagName("script"), function (script) {
+                                    if (script.readyState === "interactive") {
+                                        callbacks[script.uniqueID](args);
+                                        return false;
+                                    }
+                                });
+                            };
                         }
 
-                        script.onload = function () {
-                            callback(modular.popAnonymousDefine());
-                        };
-                        script.type = "text/javascript";
-                        script.src = uri;
-                        head.insertBefore(script, head.firstChild);
-                    });
+                        modular.configure({
+                            "baseUrl": global.location.pathname.replace(/\/?[^\/]+$/, ""),
+                            "defineAnonymous": defineAnonymous,
+                            "exclude": /^(https?:)?\/\//,
+                            "transport": function (callback, module) {
+                                var script = document.createElement("script"),
+                                    uri = makePath(get(module.config, "baseUrl"), module.getID());
+
+                                if (get(module.config, "cache") === false) {
+                                    uri += "?__r=" + Math.random();
+                                }
+
+                                if (useInteractiveScript) {
+                                    callbacks[script.uniqueID] = callback;
+                                } else {
+                                    script.onload = function () {
+                                        callback(anonymousDefine);
+                                    };
+                                }
+
+                                script.type = "text/javascript";
+                                script.src = uri;
+                                head.insertBefore(script, head.firstChild);
+                            }
+                        });
+                    }(global.document));
 
                     util.each(global.document.getElementsByTagName("script"), function (script) {
                         var main = script.getAttribute("data-main");
