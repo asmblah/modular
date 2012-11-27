@@ -653,17 +653,17 @@
                             }
                         });
                     }(global.document));
-
-                    util.each(global.document.getElementsByTagName("script"), function (script) {
-                        var main = script.getAttribute("data-main");
-
-                        if (main) {
-                            modular.require(".", [main]);
-                            return false;
-                        }
-                    });
                 }
             }
         }
+
+        util.each(global.document.getElementsByTagName("script"), function (script) {
+            var main = script.getAttribute("data-main");
+
+            if (main) {
+                global.require(".", [main]);
+                return false;
+            }
+        });
     }());
 }());
