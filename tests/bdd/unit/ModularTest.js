@@ -166,12 +166,6 @@ define([
         });
 
         describe("parseArgs()", function () {
-            it("should extend from the loader's current default config", function () {
-                loader.configure({ friend: "or foe" });
-
-                expect(loader.parseArgs({}).config).to.have.property("friend");
-            });
-
             it("should use the object as factory if just passed an object", function () {
                 var factory = { bass: "in your face" };
 

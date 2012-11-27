@@ -412,7 +412,7 @@
                         module;
 
                     if (id === null) {
-                        get(args.config, "defineAnonymous")(args);
+                        get(util.extend({}, this.config, args.config), "defineAnonymous")(args);
                     } else {
                         module = this.getModule(id);
                         if (module) {
@@ -420,7 +420,7 @@
                                 throw new Error("Module '" + id + "' has already been defined");
                             }
                         } else {
-                            module = this.createModule(id, args.config);
+                            module = this.createModule(id, util.extend({}, this.config, args.config));
                         }
 
                         module.define(args.config, args.dependencyIDs, args.factory);
@@ -478,7 +478,7 @@
                     }
 
                     return {
-                        config: util.extend({}, this.config, config),
+                        config: config || {},
                         id: id,
                         dependencyIDs: dependencyIDs || [],
                         factory: factory
@@ -534,7 +534,7 @@
                 require: function (arg1, arg2, arg3, arg4) {
                     var args = this.parseArgs(arg1, arg2, arg3, arg4),
                         id = args.id,
-                        module = new Module(this, args.config, id);
+                        module = new Module(this, util.extend({}, this.config, args.config), id);
 
                     module.define(args.config, args.dependencyIDs, args.factory, function () {
                         module.load();
