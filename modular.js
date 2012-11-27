@@ -661,14 +661,16 @@
             }
         }
 
-        util.each(global.document.getElementsByTagName("script"), function (script) {
-            var main = script.getAttribute("data-main");
+        if (!isNode) {
+            util.each(global.document.getElementsByTagName("script"), function (script) {
+                var main = script.getAttribute("data-main");
 
-            if (main) {
-                script.removeAttribute("data-main");
-                global.require(".", [main]);
-                return false;
-            }
-        });
+                if (main) {
+                    script.removeAttribute("data-main");
+                    global.require(".", [main]);
+                    return false;
+                }
+            });
+        }
     }());
 }());
