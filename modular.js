@@ -661,6 +661,7 @@
             var main = script.getAttribute("data-main");
 
             if (main) {
+                script.removeAttribute("data-main");
                 global.require(".", [main]);
                 return false;
             }
