@@ -190,7 +190,6 @@
                             idFilter(dependencyID, funnel.add(function (dependencyID) {
                                 dependency = loader.getModule(dependencyID) || loader.createModule(dependencyID, module.config);
                                 module.dependencies[dependencyIndex] = dependency;
-                                util.extend(dependency.config, module.config);
                             }));
                         }
                     });
@@ -534,7 +533,7 @@
                 require: function (arg1, arg2, arg3, arg4) {
                     var args = this.parseArgs(arg1, arg2, arg3, arg4),
                         id = args.id,
-                        module = new Module(this, util.extend({}, this.config, args.config), id);
+                        module = new Module(this, this.config, id);
 
                     module.define(args.config, args.dependencyIDs, args.factory, function () {
                         module.load();
