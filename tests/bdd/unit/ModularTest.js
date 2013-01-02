@@ -37,7 +37,7 @@ define([
             });
         });
 
-        describe("addTransport()", function () {
+        describe("transport/defineAnonymous", function () {
             it("should support a simple script-tag-based dynamic loader", function (done) {
                 var lastDefine,
                     Magic = {};
