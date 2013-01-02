@@ -176,7 +176,14 @@
                             });
                         } else {
                             idFilter(dependencyID, funnel.add(function (dependencyID) {
-                                dependency = loader.getModule(dependencyID) || loader.createModule(dependencyID, module.config);
+                                dependency = loader.getModule(dependencyID);
+
+                                if (dependency) {
+                                    util.extend(dependency.config, module.config);
+                                } else {
+                                    dependency = loader.createModule(dependencyID, module.config);
+                                }
+
                                 module.dependencies[dependencyIndex] = dependency;
                             }));
                         }
