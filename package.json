@@ -31,8 +31,8 @@
     },
     "licenses": [
         {
-            "type": "GPL",
-            "url": "https://github.com/asmblah/modular/raw/master/LICENSE.txt"
+            "type": "MIT",
+            "url": "https://github.com/asmblah/modular/raw/master/MIT-LICENSE.txt"
         }
     ]
 }
