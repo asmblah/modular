@@ -676,7 +676,13 @@
                                     callbacks[script.uniqueID] = callback;
                                 } else {
                                     script.onload = function () {
-                                        callback(anonymousDefine);
+                                        // Clear anonymousDefine to ensure it is not reused
+                                        // when the next module doesn't perform anonymous define(...)
+                                        var args = anonymousDefine;
+                                        anonymousDefine = null;
+                                        callback(args);
+
+                                        head.removeChild(script);
                                     };
                                 }
 
