@@ -125,6 +125,7 @@
                 LOADED = 7;
 
             function Module(loader, config, id, value) {
+                var module = this;
                 this.config = util.extend({}, config);
                 this.dependencies = [];
                 this.factory = null;
@@ -132,17 +133,36 @@
                 this.loader = loader;
                 this.mode = value ? LOADED : UNDEFINED;
                 this.requesterQueue = [];
-                this.value = value || null;
+                this.value = value;
                 this.whenLoaded = null;
+                this.commonJSModule = null;
             }
             util.extend(Module.prototype, {
                 define: function (config, dependencyIDs, factory, callback) {
                     var loader = this.loader,
                         module = this,
-                        exports = {},
                         dependencyConfigs = {},
                         idFilter,
                         funnel = new Funnel();
+
+                    function getCommonJSModule() {
+                        if (!module.commonJSModule) {
+                            module.commonJSModule = {
+                                config: module.config,
+                                defer: function () {
+                                    module.mode = DEFERRED;
+                                    return function (value) {
+                                        module.whenLoaded(value);
+                                    };
+                                },
+                                exports: {},
+                                id: module.id,
+                                uri: module.id
+                            };
+                        }
+
+                        return module.commonJSModule;
+                    }
 
                     util.extend(module.config, config);
                     idFilter = get(module.config, "idFilter");
@@ -159,21 +179,9 @@
                                 loader.require(config, args.id || module.id, args.dependencyIDs, args.factory);
                             });
                         } else if (dependencyID === "exports") {
-                            module.value = exports;
-                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, exports);
+                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, getCommonJSModule().exports);
                         } else if (dependencyID === "module") {
-                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, {
-                                id: module.id,
-                                uri: module.id,
-                                config: module.config,
-                                exports: exports,
-                                defer: function () {
-                                    module.mode = DEFERRED;
-                                    return function (value) {
-                                        module.whenLoaded(value);
-                                    };
-                                }
-                            });
+                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, getCommonJSModule());
                         } else {
                             idFilter(dependencyID, funnel.add(function (dependencyID) {
                                 dependency = loader.getModule(dependencyID);
@@ -210,7 +218,9 @@
                 },
 
                 getValue: function () {
-                    return this.value;
+                    var module = this;
+
+                    return module.commonJSModule ? module.commonJSModule.exports : module.value;
                 },
 
                 isDeferred: function () {
@@ -231,15 +241,18 @@
 
                     function load(dependencyValues, value, callback) {
                         module.mode = LOADED;
-                        module.value = value || module.value;
+
+                        if (value) {
+                            module.value = value;
+                        }
 
                         util.each(module.requesterQueue, function (callback) {
-                            callback(module.value);
+                            callback(module.getValue());
                         });
                         module.requesterQueue.length = 0;
 
                         if (callback) {
-                            callback(module.value);
+                            callback(module.getValue());
                         }
                     }
 
@@ -322,7 +335,7 @@
                         loadDependencies(callback);
                     } else if (module.mode === LOADED) {
                         if (callback) {
-                            callback(module.value);
+                            callback(module.getValue());
                         }
                     }
                 }

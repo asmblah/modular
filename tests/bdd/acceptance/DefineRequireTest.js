@@ -50,7 +50,20 @@ define([
         it("should define a module with value null if just passed an id", function () {
             loader.define("hooman");
 
-            expect(loader.getModule("hooman").getValue()).to.equal(null);
+            expect(loader.getModule("hooman").getValue()).to.be.undefined;
+        });
+
+        it("should define a module with value undefined if no 'module' or 'exports' dependencies and undefined as return value", function (done) {
+            loader.define("undef", function () {});
+
+            loader.require([
+                "undef"
+            ], function (
+                undef
+            ) {
+                expect(undef).to.be.undefined;
+                done();
+            });
         });
 
         it("should do nothing when no transport defined and defining an anonymous module with just an object", function () {

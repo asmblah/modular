@@ -121,7 +121,7 @@ define([
                 ], function (
                     importedMysticism
                 ) {
-                    expect(importedMysticism).to.equal(null);
+                    expect(importedMysticism).to.equal(undefined);
                     done();
                 });
             });

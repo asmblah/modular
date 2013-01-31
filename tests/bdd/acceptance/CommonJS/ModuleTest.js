@@ -57,16 +57,62 @@ define([
             });
         });
 
-        it("should make the same object returned by named dependency 'exports' available via module.exports", function (done) {
-            loader.require([
-                "exports",
-                "module"
-            ], function (
-                exports,
-                module
-            ) {
-                expect(module.exports).to.equal(exports);
-                done();
+        describe("module.exports", function () {
+            it("should use module.exports as the module value", function (done) {
+                var moduleValue;
+
+                loader.define("module/dot/exports", [
+                    "module"
+                ], function (
+                    module
+                ) {
+                    moduleValue = module.exports;
+                });
+
+                loader.require([
+                    "module/dot/exports"
+                ], function (
+                    moduleDotExports
+                ) {
+                    expect(moduleDotExports).to.equal(moduleValue);
+                    done();
+                });
+            });
+
+            it("should make the same object returned by named dependency 'exports' available via module.exports", function (done) {
+                loader.require([
+                    "exports",
+                    "module"
+                ], function (
+                    exports,
+                    module
+                ) {
+                    expect(module.exports).to.equal(exports);
+                    done();
+                });
+            });
+
+            describe("when overwriting", function () {
+                it("should use the new module.exports value as the module value", function (done) {
+                    var exports = {};
+
+                    loader.define("the/overwritten", [
+                        "module"
+                    ], function (
+                        module
+                    ) {
+                        module.exports = exports;
+                    });
+
+                    loader.require([
+                        "the/overwritten"
+                    ], function (
+                        overwritten
+                    ) {
+                        expect(overwritten).to.equal(exports);
+                        done();
+                    });
+                });
             });
         });
     });
