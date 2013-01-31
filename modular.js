@@ -386,7 +386,7 @@
                     // Publish support for the AMD pattern
                     util.extend(define, {
                         "amd": {
-                            //"jQuery": true
+                            "jQuery": true
                         }
                     });
 
