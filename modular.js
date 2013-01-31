@@ -686,7 +686,7 @@
             }
         }
 
-        if (!isNode) {
+        function loadMain() {
             util.each(global.document.getElementsByTagName("script"), function (script) {
                 var main = script.getAttribute("data-main");
 
@@ -696,6 +696,22 @@
                     return false;
                 }
             });
+        }
+
+        if (!isNode) {
+            if (global.addEventListener) {
+                global.addEventListener("DOMContentLoaded", loadMain);
+            } else {
+                (function check() {
+                    try {
+                        global.doScroll("left");
+                    } catch (error) {
+                        global.setTimeout(check);
+                    }
+
+                    loadMain();
+                }());
+            }
         }
     }());
 }());
