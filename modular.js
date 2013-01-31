@@ -577,11 +577,15 @@
         var isNode = (typeof require !== "undefined" && typeof module !== "undefined");
 
         function makePath(baseURI, id) {
-            if (/^(https?:)?\/\//.test(id)) {
+            if (/\?/.test(id)) {
                 return id;
             }
 
-            return (baseURI ? baseURI.replace(/\/$/, "") + "/" : "") + id.replace(/\.js$/, "") + ".js";
+            if (!/^(https?:)?\/\//.test(id)) {
+                id = (baseURI ? baseURI.replace(/\/$/, "") + "/" : "") + id;
+            }
+
+            return id.replace(/\.js$/, "") + ".js";
         }
 
         // Don't override an existing AMD loader: instead, register the Modular instance
