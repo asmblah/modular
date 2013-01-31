@@ -684,6 +684,29 @@
 
                                         head.removeChild(script);
                                     };
+
+                                    script.onerror = function () {
+                                        var msg = 'Failed to load module "' + module.getID() + '"',
+                                            dependentIDs = [];
+
+                                        if (global.console) {
+                                            util.each(modular.modules, function (dependent) {
+                                                util.each(dependent.getDependencies(), function (dependency) {
+                                                    if (dependency.getID() === module.getID()) {
+                                                        dependentIDs.push(dependent.getID());
+                                                    }
+                                                });
+                                            });
+
+                                            if (dependentIDs.length) {
+                                                msg += " for:\n- " + dependentIDs.join("\n- ");
+                                            }
+
+                                            global.console.error(msg);
+                                        }
+
+                                        head.removeChild(script);
+                                    };
                                 }
 
                                 script.type = "text/javascript";
