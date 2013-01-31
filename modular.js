@@ -201,6 +201,10 @@
                     });
                 },
 
+                getDependencies: function () {
+                    return this.dependencies;
+                },
+
                 getID: function () {
                     return this.id;
                 },
@@ -528,11 +532,25 @@
                 require: function (arg1, arg2, arg3, arg4) {
                     var args = this.parseArgs(arg1, arg2, arg3, arg4),
                         id = args.id,
+                        module;
+
+                    if (args.id && args.dependencyIDs.length === 0 && !args.factory) {
+                        module = this.getModule(args.id);
+
+                        if (!module || (!module.isLoaded() && module.getDependencies().length > 0)) {
+                            throw new Error("Module '" + args.id + "' has not yet loaded");
+                        }
+
+                        module.load();
+
+                        return module.getValue();
+                    } else {
                         module = new Module(this, this.config, id);
 
-                    module.define(args.config, args.dependencyIDs, args.factory, function () {
-                        module.load();
-                    });
+                        module.define(args.config, args.dependencyIDs, args.factory, function () {
+                            module.load();
+                        });
+                    }
                 },
 
                 util: util

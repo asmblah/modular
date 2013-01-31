@@ -349,6 +349,49 @@ define([
             });
         });
 
+        describe("synchronous require()", function () {
+            it("should return the value of the specified module if the module has dependencies and has been loaded", function (done) {
+                var FileSystem;
+
+                loader.define("BlockDevice", function () {
+                    function BlockDevice() {}
+
+                    return BlockDevice;
+                });
+
+                loader.define("FileSystem", [
+                    "BlockDevice"
+                ], function (
+                    BlockDevice
+                ) {
+                    FileSystem = function FileSystem() {
+                        this.blockDevice = new BlockDevice();
+                    };
+
+                    return FileSystem;
+                });
+
+                loader.require([
+                    "FileSystem"
+                ], function (
+                    FileSystem
+                ) {
+                    expect(loader.require("FileSystem")).to.equal(FileSystem);
+                    done();
+                });
+            });
+
+            it("should load then return the value of the specified module if the module was defined with no dependencies", function () {
+                var BlockDevice = function BlockDevice() {};
+
+                loader.define("BlockDevice", function () {
+                    return BlockDevice;
+                });
+
+                expect(loader.require("BlockDevice")).to.equal(BlockDevice);
+            });
+        });
+
         describe("ID mapping", function () {
             it("should support mapping of base term", function (done) {
                 var earth = {};
