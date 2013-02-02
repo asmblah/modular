@@ -737,9 +737,10 @@
             } else {
                 (function check() {
                     try {
-                        global.doScroll("left");
+                        global.document.documentElement.doScroll("left");
                     } catch (error) {
                         global.setTimeout(check);
+                        return;
                     }
 
                     loadMain();
