@@ -645,15 +645,19 @@
                             head = document.getElementsByTagName("head")[0],
                             useInteractiveScript = has.call(document, "uniqueID");
 
+                        function load(script, args) {
+                            var callback = callbacks[script.uniqueID];
+                            if (callback) {
+                                delete callbacks[script.uniqueID];
+                                callback(args);
+                            }
+                        }
+
                         if (useInteractiveScript) {
                             defineAnonymous = function (args) {
                                 util.each(document.getElementsByTagName("script"), function (script) {
-                                    var callback;
                                     if (script.readyState === "interactive") {
-                                        callback = callbacks[script.uniqueID];
-                                        if (callback) {
-                                            callback(args);
-                                        }
+                                        load(script, args);
                                         return false;
                                     }
                                 });
@@ -674,6 +678,12 @@
 
                                 if (useInteractiveScript) {
                                     callbacks[script.uniqueID] = callback;
+
+                                    script.onreadystatechange = function () {
+                                        if (script.readyState === "loaded") {
+                                            load(script, null);
+                                        }
+                                    };
                                 } else {
                                     script.onload = function () {
                                         // Clear anonymousDefine to ensure it is not reused
