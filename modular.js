@@ -19,6 +19,7 @@
         get = function (obj, prop) {
             return obj[prop];
         },
+        undef = undefined, // Closure compiler seems happier with this, compresses smaller
         util = {
             each: function (obj, callback, options) {
                 var key,
@@ -80,7 +81,7 @@
             },
 
             isUndefined: function (obj) {
-                return typeof obj === "undefined";
+                return obj === undef;
             }
         },
         Funnel = (function () {
@@ -315,7 +316,7 @@
                             define = {
                                 config: {},
                                 dependencyIDs: [],
-                                factory: undefined
+                                factory: undef
                             };
                         }
 
@@ -450,7 +451,7 @@
                     var config = null,
                         id = null,
                         dependencyIDs = null,
-                        factory = undefined;
+                        factory = undef;
 
                     if (util.isPlainObject(arg1)) {
                         config = arg1;
