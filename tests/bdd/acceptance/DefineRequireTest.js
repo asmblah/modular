@@ -369,22 +369,33 @@ define([
                 expect(spy).to.have.been.calledWith(value);
             });
 
-            it("should correctly handle callback being called immediately", function () {
-                var spy = sinon.spy();
+            describe("when the callback is called immediately", function () {
+                var value;
 
-                loader.define("ImmediateFuture", [
-                    "module"
-                ], function (
-                    module
-                ) {
-                    module.defer()();
+                beforeEach(function () {
+                    spy = sinon.spy();
+                    value = {};
+
+                    loader.define("ImmediateFuture", [
+                        "module"
+                    ], function (
+                        module
+                    ) {
+                        module.defer()(value);
+                    });
+
+                    loader.require([
+                        "ImmediateFuture"
+                    ], spy);
                 });
 
-                loader.require([
-                    "ImmediateFuture"
-                ], spy);
+                it("should call the module factory", function () {
+                    expect(spy).to.have.been.calledOnce;
+                });
 
-                expect(spy).to.have.been.calledOnce;
+                it("should pass the dependency to the module factory", function () {
+                    expect(spy).to.have.been.calledWith(value);
+                });
             });
         });
 
