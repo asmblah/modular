@@ -665,7 +665,8 @@
                         }
 
                         modular.configure({
-                            "baseUrl": global.location.pathname.replace(/\/?[^\/]+$/, ""),
+                            // TODO: Tests to ensure baseURI is respected (eg. when <base /> tag is on page)
+                            "baseUrl": (document.baseURI || global.location.pathname).replace(/\/?[^\/]+$/, ""),
                             "defineAnonymous": defineAnonymous,
                             "exclude": /^(https?:)?\/\//,
                             "transport": function (callback, module) {
