@@ -366,7 +366,7 @@ define([
                 var value = {};
 
                 callback(value);
-                expect(spy.calledWith(value)).to.be.ok;
+                expect(spy).to.have.been.calledWith(value);
             });
 
             it("should correctly handle callback being called immediately", function () {
