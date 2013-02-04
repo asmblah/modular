@@ -9,7 +9,7 @@
  * https://github.com/asmblah/modular/raw/master/MIT-LICENSE.txt
  */
 
-/*global define */
+/*global beforeEach, define, describe, it */
 define([
     "vendor/chai/chai",
     "root/modular"
@@ -54,6 +54,79 @@ define([
             ) {
                 expect(module.id).to.equal("where/is/the/love");
                 done();
+            });
+        });
+
+        describe("module factory return value overriding module.exports", function () {
+            describe("when module.exports is unmodified", function () {
+                it("should use null as the module's value when its factory returns null", function (done) {
+                    var value;
+
+                    loader.define("amp/er/sand", [
+                        "module"
+                    ], function (
+                        module
+                    ) {
+                        value = null;
+
+                        return value;
+                    });
+
+                    loader.require([
+                        "amp/er/sand"
+                    ], function (
+                        ampersand
+                    ) {
+                        expect(ampersand).to.equal(value);
+                        done();
+                    });
+                });
+
+                it("should use 7 as the module's value when its factory returns 7", function (done) {
+                    var value;
+
+                    loader.define("amp/er/sand", [
+                        "module"
+                    ], function (
+                        module
+                    ) {
+                        value = 7;
+
+                        return value;
+                    });
+
+                    loader.require([
+                        "amp/er/sand"
+                    ], function (
+                        ampersand
+                    ) {
+                        expect(ampersand).to.equal(value);
+                        done();
+                    });
+                });
+
+                it("should use the specified object as the module's value when its factory returns an object", function (done) {
+                    var value;
+
+                    loader.define("amp/er/sand", [
+                        "module"
+                    ], function (
+                        module
+                    ) {
+                        value = {};
+
+                        return value;
+                    });
+
+                    loader.require([
+                        "amp/er/sand"
+                    ], function (
+                        ampersand
+                    ) {
+                        expect(ampersand).to.equal(value);
+                        done();
+                    });
+                });
             });
         });
 

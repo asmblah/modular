@@ -72,11 +72,15 @@
             },
 
             isPlainObject: function (obj) {
-                return util.getType(obj) === "Object" && typeof obj !== "undefined";
+                return util.getType(obj) === "Object" && !util.isUndefined(obj);
             },
 
             isString: function (str) {
                 return typeof str === "string" || util.getType(str) === "String";
+            },
+
+            isUndefined: function (obj) {
+                return typeof obj === "undefined";
             }
         },
         Funnel = (function () {
@@ -133,9 +137,16 @@
                 this.loader = loader;
                 this.mode = value ? LOADED : UNDEFINED;
                 this.requesterQueue = [];
-                this.value = value;
                 this.whenLoaded = null;
-                this.commonJSModule = null;
+                this.commonJSModule = {
+                    defer: function () {
+                        module.mode = DEFERRED;
+                        return function (value) {
+                            module.whenLoaded(value);
+                        };
+                    },
+                    exports: value
+                };
             }
             util.extend(Module.prototype, {
                 define: function (config, dependencyIDs, factory, callback) {
@@ -145,27 +156,14 @@
                         idFilter,
                         funnel = new Funnel();
 
-                    function getCommonJSModule() {
-                        if (!module.commonJSModule) {
-                            module.commonJSModule = {
-                                config: module.config,
-                                defer: function () {
-                                    module.mode = DEFERRED;
-                                    return function (value) {
-                                        module.whenLoaded(value);
-                                    };
-                                },
-                                exports: {},
-                                id: module.id,
-                                uri: module.id
-                            };
-                        }
-
-                        return module.commonJSModule;
-                    }
-
                     util.extend(module.config, config);
                     idFilter = get(module.config, "idFilter");
+
+                    util.extend(module.commonJSModule, {
+                        config: module.config,
+                        id: module.id,
+                        uri: module.id
+                    });
 
                     util.each(dependencyIDs, function (dependencyID, dependencyIndex) {
                         var dependency;
@@ -179,9 +177,15 @@
                                 loader.require(config, args.id || module.id, args.dependencyIDs, args.factory);
                             });
                         } else if (dependencyID === "exports") {
-                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, getCommonJSModule().exports);
+                            if (util.isUndefined(module.commonJSModule.exports)) {
+                                module.commonJSModule.exports = {};
+                            }
+                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, module.commonJSModule.exports);
                         } else if (dependencyID === "module") {
-                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, getCommonJSModule());
+                            if (util.isUndefined(module.commonJSModule.exports)) {
+                                module.commonJSModule.exports = {};
+                            }
+                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, module.commonJSModule);
                         } else {
                             idFilter(dependencyID, funnel.add(function (dependencyID) {
                                 dependency = loader.getModule(dependencyID);
@@ -220,7 +224,7 @@
                 getValue: function () {
                     var module = this;
 
-                    return module.commonJSModule ? module.commonJSModule.exports : module.value;
+                    return module.commonJSModule.exports;
                 },
 
                 isDeferred: function () {
@@ -242,8 +246,8 @@
                     function load(dependencyValues, value, callback) {
                         module.mode = LOADED;
 
-                        if (value) {
-                            module.value = value;
+                        if (!util.isUndefined(value)) {
+                            module.commonJSModule.exports = value;
                         }
 
                         util.each(module.requesterQueue, function (callback) {
@@ -311,7 +315,7 @@
                             define = {
                                 config: {},
                                 dependencyIDs: [],
-                                factory: null
+                                factory: undefined
                             };
                         }
 
@@ -446,7 +450,7 @@
                     var config = null,
                         id = null,
                         dependencyIDs = null,
-                        factory = null;
+                        factory = undefined;
 
                     if (util.isPlainObject(arg1)) {
                         config = arg1;
