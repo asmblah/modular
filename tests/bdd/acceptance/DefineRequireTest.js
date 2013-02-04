@@ -273,6 +273,32 @@ define([
             });
         });
 
+        it("should not evaluate a factory function for a module before required when it has no dependencies or dependents", function () {
+            var factory = sinon.spy();
+
+            loader.define("lazy/load/me", factory);
+
+            expect(factory).to.have.not.been.called;
+        });
+
+        it("should not evaluate a factory function for a module before required when it has dependencies", function () {
+            var factory = sinon.spy();
+
+            loader.define("lazy/load/me", function () {});
+            loader.define("lazy/load/me/too", ["lazy/load/me"], factory);
+
+            expect(factory).to.have.not.been.called;
+        });
+
+        it("should not evaluate a factory function for a module before required when it has dependents", function () {
+            var factory = sinon.spy();
+
+            loader.define("lazy/load/me", factory);
+            loader.define("lazy/load/me/too", ["lazy/load/me"], function () {});
+
+            expect(factory).to.have.not.been.called;
+        });
+
         it("should pass dependencies to closure in the order requested", function () {
             var dep1 = {},
                 dep2 = {};
