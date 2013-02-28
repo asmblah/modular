@@ -353,6 +353,17 @@ define([
 
                     expect(loader.resolveDependencyID(dependencyID, dependentID, mappings)).to.equal(expectedResultID);
                 });
+
+                it("should not use mapping after resolving relative to dependent ID", function () {
+                    var dependencyID = "./module/here",
+                        dependentID = "tasty/world",
+                        mappings = {
+                            "tasty": "not/here"
+                        },
+                        expectedResultID = "tasty/module/here";
+
+                    expect(loader.resolveDependencyID(dependencyID, dependentID, mappings)).to.equal(expectedResultID);
+                });
             });
 
             describe("ID exclusions", function () {

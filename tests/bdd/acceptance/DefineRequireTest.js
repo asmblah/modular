@@ -535,6 +535,25 @@ define([
                 });
             });
 
+            it("should not apply mapping to resolved IDs with same-directory term at start", function (done) {
+                var value = {};
+
+                loader.define("tasty/module/here", value);
+
+                loader.require({
+                    paths: {
+                        "tasty": "not/here"
+                    }
+                }, "tasty/world", [
+                    "./module/here"
+                ], function (
+                    importedValue
+                ) {
+                    expect(importedValue).to.equal(value);
+                    done();
+                });
+            });
+
             it("should support mapping a specific module ID", function (done) {
                 var value = {};
 

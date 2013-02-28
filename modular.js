@@ -514,6 +514,7 @@
 
                     if (/^\.\.?\//.test(id) && dependentID) {
                         id = dependentID.replace(/[^\/]+$/, "") + id;
+                        mappings = null;
                     }
 
                     // Resolve parent-directory terms
