@@ -13,26 +13,26 @@
 define([
     "vendor/chai/chai",
     "vendor/sinon/sinon",
-    "root/modulo"
+    "root/modular"
 ], function (
     chai,
     sinon,
-    modulo
+    modular
 ) {
     "use strict";
 
     var expect = chai.expect;
 
-    describe("Modulo", function () {
+    describe("Modular", function () {
         var loader;
 
         beforeEach(function (done) {
-            modulo.require([
-                "Modulo"
+            modular.require([
+                "Modular"
             ], function (
-                Modulo
+                Modular
             ) {
-                loader = new Modulo();
+                loader = new Modular();
                 done();
             });
         });

@@ -44,8 +44,8 @@ require({
         "./acceptance/DefineRequireTest",
         "./acceptance/SampleProgramTest",
         "./integration/NamedModuleTest",
-        "./unit/ModuloTest",
-        "./unit/UtilTest"
+        "./unit/js/ModularTest",
+        "./unit/js/UtilTest"
     ], function () {
         mocha.run();
     });

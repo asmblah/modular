@@ -28,11 +28,11 @@ define([
 
         beforeEach(function (done) {
             modular.require([
-                "Modulo"
+                "Modular"
             ], function (
-                Modulo
+                Modular
             ) {
-                loader = new Modulo();
+                loader = new Modular();
                 done();
             });
         });

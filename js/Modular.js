@@ -344,8 +344,8 @@
 
             return Module;
         }()),
-        Modulo = (function () {
-            function Modulo() {
+        Modular = (function () {
+            function Modular() {
                 this.config = {
                     "baseUrl": "",
                     "defineAnonymous": function (args) {},
@@ -360,15 +360,15 @@
                 };
                 this.modules = {};
 
-                // Expose Modulo class itself to dependents
-                this.define("Modulo", function () {
-                    return Modulo;
+                // Expose Modular class itself to dependents
+                this.define("Modular", function () {
+                    return Modular;
                 });
 
-                // Expose this instance of Modulo to its dependents
+                // Expose this instance of Modular to its dependents
                 this.define("modular", this);
             }
-            util.extend(Modulo.prototype, {
+            util.extend(Modular.prototype, {
                 configure: function (config) {
                     if (config) {
                         util.extend(this.config, config);
@@ -571,15 +571,15 @@
                 util: util
             });
 
-            return Modulo;
+            return Modular;
         }()),
-        modulo = new Modulo();
+        modular = new Modular();
 
-    // Don't override an existing AMD loader: instead, register the Modulo instance
+    // Allow the Modular instance to be loaded as an AMD dependency itself
     if (global.define) {
-        global.define(modulo);
+        global.define(modular);
     } else {
-        global.define = modulo.createDefiner();
-        global.require = modulo.createRequirer();
+        global.define = modular.createDefiner();
+        global.require = modular.createRequirer();
     }
 }(this));
