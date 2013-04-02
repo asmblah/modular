@@ -153,7 +153,6 @@
                 define: function (config, dependencyIDs, factory, callback) {
                     var loader = this.loader,
                         module = this,
-                        dependencyConfigs = {},
                         idFilter,
                         funnel = new Funnel();
 
@@ -167,8 +166,6 @@
                     });
 
                     util.each(dependencyIDs, function (dependencyID, dependencyIndex) {
-                        var dependency;
-
                         dependencyID = loader.resolveDependencyID(dependencyID, module.id, get(module.config, "paths"), get(module.config, "exclude"));
 
                         if (dependencyID === "require") {
@@ -189,7 +186,7 @@
                             module.dependencies[dependencyIndex] = new Module(loader, module.config, null, module.commonJSModule);
                         } else {
                             idFilter(dependencyID, funnel.add(function (dependencyID) {
-                                dependency = loader.getModule(dependencyID);
+                                var dependency = loader.getModule(dependencyID);
 
                                 if (dependency) {
                                     util.extend(dependency.config, module.config);
