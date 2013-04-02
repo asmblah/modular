@@ -28,11 +28,11 @@ define([
 
         beforeEach(function (done) {
             modular.require([
-                "Modular"
+                "Modulo"
             ], function (
-                Modular
+                Modulo
             ) {
-                loader = new Modular();
+                loader = new Modulo();
                 done();
             });
         });
@@ -87,9 +87,9 @@ define([
             }).to.Throw(/Invalid dependency id/);
         });
 
-        it("should make the Modular class available as the 'Modular' named dependency", function (done) {
+        it("should make the Modulo class available as the 'Modulo' named dependency", function (done) {
             loader.require([
-                "Modular"
+                "Modulo"
             ], function (
                 ModularClass
             ) {
@@ -98,7 +98,7 @@ define([
             });
         });
 
-        it("should make the owning Modular instance available as the 'modular' named dependency", function (done) {
+        it("should make the owning Modulo instance available as the 'modular' named dependency", function (done) {
             loader.require([
                 "modular"
             ], function (

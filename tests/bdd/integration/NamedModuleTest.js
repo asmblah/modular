@@ -26,11 +26,11 @@ define([
 
         beforeEach(function (done) {
             modular.require([
-                "Modular"
+                "Modulo"
             ], function (
-                Modular
+                Modulo
             ) {
-                loader = new Modular();
+                loader = new Modulo();
 
                 loader.define("classes/Animal", function () {
                     function Animal(species) {
