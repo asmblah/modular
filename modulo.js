@@ -9,12 +9,11 @@
  * https://github.com/asmblah/modular/raw/master/MIT-LICENSE.txt
  */
 
-(function () {
+(function (global) {
     "use strict";
     /*global require, module */
 
-    var global = new [Function][0]("return this;")(), // Keep JSLint happy
-        hasOwn = {}.hasOwnProperty,
+    var hasOwn = {}.hasOwnProperty,
         slice = [].slice,
         get = function (obj, prop) {
             return obj[prop];
@@ -583,4 +582,4 @@
         global.define = modulo.createDefiner();
         global.require = modulo.createRequirer();
     }
-}());
+}(this));
