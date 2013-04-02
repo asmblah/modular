@@ -14,7 +14,7 @@
     /*global require, module */
 
     var global = new [Function][0]("return this;")(), // Keep JSLint happy
-        has = {}.hasOwnProperty,
+        hasOwn = {}.hasOwnProperty,
         slice = [].slice,
         get = function (obj, prop) {
             return obj[prop];
@@ -31,7 +31,7 @@
 
                 options = options || {};
 
-                if (has.call(obj, "length") && !options.keys) {
+                if (hasOwn.call(obj, "length") && !options.keys) {
                     for (key = 0, length = obj.length; key < length; key += 1) { // Keep JSLint happy with "+= 1"
                         if (callback.call(obj[key], obj[key], key) === false) {
                             break;
@@ -39,7 +39,7 @@
                     }
                 } else {
                     for (key in obj) {
-                        if (has.call(obj, key)) {
+                        if (hasOwn.call(obj, key)) {
                             if (callback.call(obj[key], obj[key], key) === false) {
                                 break;
                             }
