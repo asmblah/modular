@@ -82,5 +82,22 @@ define([
                 });
             });
         });
+
+        it("should return the result from a scoped synchronous require()", function (done) {
+            var fun = {};
+
+            loader.define("/on/the/wild/side", function () {
+                return fun;
+            });
+
+            loader.require([
+                "require"
+            ], function (
+                require
+            ) {
+                expect(require("/on/the/wild/side")).to.equal(fun);
+                done();
+            });
+        });
     });
 });

@@ -175,7 +175,7 @@
                             module.dependencies[dependencyIndex] = new Module(loader, module.config, null, function (arg1, arg2, arg3, arg4) {
                                 var args = loader.parseArgs(arg1, arg2, arg3, arg4),
                                     config = util.extend({}, module.config, args.config);
-                                loader.require(config, args.id || module.id, args.dependencyIDs, args.factory);
+                                return loader.require(config, args.id || module.id, args.dependencyIDs, args.factory);
                             });
                         } else if (dependencyID === "exports") {
                             if (util.isUndefined(module.commonJSModule.exports)) {
