@@ -9,11 +9,12 @@
  * https://github.com/asmblah/modular/raw/master/MIT-LICENSE.txt
  */
 
-/*global require */
+/*global require, mocha */
 require({
     paths: {
-        "root": "../..",
-        "vendor": "../../vendor"
+        "js": "/../../js",
+        "root": "/../..",
+        "vendor": "/../../vendor"
     }
 }, [
     "require",
@@ -44,8 +45,10 @@ require({
         "./acceptance/DefineRequireTest",
         "./acceptance/SampleProgramTest",
         "./integration/NamedModuleTest",
+        "./unit/js/Modular/UtilTest",
         "./unit/js/ModularTest",
-        "./unit/js/UtilTest"
+        "./unit/js/UtilTest",
+        "./unit/modularTest"
     ], function () {
         mocha.run();
     });
