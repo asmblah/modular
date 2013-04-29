@@ -32,14 +32,14 @@
 
                 if (hasOwn.call(obj, "length") && !options.keys) {
                     for (key = 0, length = obj.length; key < length; key += 1) { // Keep JSLint happy with "+= 1"
-                        if (callback.call(obj[key], obj[key], key) === false) {
+                        if (callback.call(obj[key], obj[key], key, obj) === false) {
                             break;
                         }
                     }
                 } else {
                     for (key in obj) {
                         if (hasOwn.call(obj, key)) {
-                            if (callback.call(obj[key], obj[key], key) === false) {
+                            if (callback.call(obj[key], obj[key], key, obj) === false) {
                                 break;
                             }
                         }
@@ -156,6 +156,16 @@
                         funnel = new Funnel();
 
                     util.extend(module.config, config);
+
+                    // Process relative path mappings
+                    if (module.id !== null) {
+                        util.each(get(module.config, "paths"), function (path, index, paths) {
+                            if (/^\.\.?\//.test(path)) {
+                                paths[index] = module.id.replace(/\/[^\/]*$/, "") + "/" + path;
+                            }
+                        });
+                    }
+
                     idFilter = get(module.config, "idFilter");
 
                     util.extend(module.commonJSModule, {
@@ -510,36 +520,39 @@
 
                     if (/^\.\.?\//.test(id) && dependentID) {
                         id = dependentID.replace(/[^\/]+$/, "") + id;
-                        mappings = null;
+                    } else {
+                        id = id.replace(/^\//, "");
+
+                        if (mappings && !/^\.\.?\//.test(id)) {
+                            id = (function () {
+                                var terms = id.split("/"),
+                                    portion,
+                                    index;
+
+                                if (mappings[id]) {
+                                    return mappings[id];
+                                }
+
+                                for (index = terms.length - 1; index >= 0; index -= 1) {
+                                    portion = terms.slice(0, index).join("/");
+                                    if (mappings[portion] || mappings[portion + "/"]) {
+                                        return (mappings[portion] || mappings[portion + "/"]).replace(/\/$/, "") + "/" + terms.slice(index).join("/");
+                                    }
+                                }
+                                return id;
+                            }());
+                        }
                     }
 
-                    // Resolve parent-directory terms
+                    id = id.replace(/^\//, "");
+
+                    // Resolve parent-directory terms in id
                     while (previousID !== id) {
                         previousID = id;
-                        id = id.replace(/(^|\/)(?!\.\.)([^\/]*)\/\.\.\//, "$1");
+                        id = id.replace(/(\/|^)(?!\.\.)[^\/]*\/\.\.\//, "$1");
                     }
 
-                    if (mappings && !/^\.\.?\//.test(id)) {
-                        id = (function () {
-                            var terms = id.split("/"),
-                                portion,
-                                index;
-
-                            if (mappings[id]) {
-                                return mappings[id];
-                            }
-
-                            for (index = terms.length - 1; index >= 0; index -= 1) {
-                                portion = terms.slice(0, index).join("/");
-                                if (mappings[portion] || mappings[portion + "/"]) {
-                                    return (mappings[portion] || mappings[portion + "/"]).replace(/\/$/, "") + "/" + terms.slice(index).join("/");
-                                }
-                            }
-                            return id;
-                        }());
-                    }
-
-                    id = id.replace(/(^|\/)(\.?\/)+/g, "$1").replace(/^\//, ""); // Resolve same-directory terms
+                    id = id.replace(/(^|\/)(\.?\/)+/g, "$1"); // Resolve same-directory terms
 
                     return id;
                 },
@@ -573,12 +586,18 @@
 
             return Modular;
         }()),
-        modular = new Modular();
+        modular;
 
-    // Allow the Modular instance to be loaded as an AMD dependency itself
+    // Modular is loaded as an AMD module
     if (global.define) {
-        global.define(modular);
+        if (global.define.amd) {
+            global.define(function () {
+                return Modular;
+            });
+        }
+    // Modular is loaded standalone
     } else {
+        modular = new Modular();
         global.define = modular.createDefiner();
         global.require = modular.createRequirer();
     }

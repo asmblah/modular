@@ -572,6 +572,44 @@ define([
                     done();
                 });
             });
+
+            it("should support a mapping with a same-directory relative path", function (done) {
+                var value = {};
+
+                loader.define("the/awesome/child/module", value);
+
+                loader.require({
+                    paths: {
+                        "child": "./child"
+                    }
+                }, "the/awesome/parent", [
+                    "child/module"
+                ], function (
+                    childModule
+                ) {
+                    expect(childModule).to.equal(value);
+                    done();
+                });
+            });
+
+            it("should support a mapping with a parent-directory relative path", function (done) {
+                var value = {};
+
+                loader.define("the/awesome/child/module", value);
+
+                loader.require({
+                    paths: {
+                        "child": "../awesome/child"
+                    }
+                }, "the/awesome/parent", [
+                    "child/module"
+                ], function (
+                    childModule
+                ) {
+                    expect(childModule).to.equal(value);
+                    done();
+                });
+            });
         });
 
         describe("ID filtering", function () {

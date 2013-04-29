@@ -12,12 +12,14 @@
 /*global define */
 define([
     "vendor/chai/chai",
+    "root/modular",
     "vendor/sinon/sinon",
-    "root/modular"
+    "js/util"
 ], function (
     chai,
+    modular,
     sinon,
-    modular
+    util
 ) {
     "use strict";
 
@@ -228,84 +230,101 @@ define([
         });
 
         describe("resolveDependencyID()", function () {
-            it("should resolve relative dependency IDs with parent term at start", function () {
-                var dependencyID = "../out/there",
-                    dependentID = "module/in/here",
-                    expectedResultID = "module/out/there";
-
-                expect(loader.resolveDependencyID(dependencyID, dependentID)).to.equal(expectedResultID);
-            });
-
-            it("should resolve relative dependency IDs with parent term in middle", function () {
-                var dependencyID = "module/in/there/../here/somewhere",
-                    dependentID = "",
-                    expectedResultID = "module/in/here/somewhere";
-
-                expect(loader.resolveDependencyID(dependencyID, dependentID)).to.equal(expectedResultID);
-            });
-
-            it("should leave parent terms in place if alongside dependent ID", function () {
-                var dependencyID = "../../sibling-of-only",
-                    dependentID = "only/two/deep",
-                    expectedResultID = "sibling-of-only";
-
-                expect(loader.resolveDependencyID(dependencyID, dependentID)).to.equal(expectedResultID);
-            });
-
-            it("should leave parent terms in place if outside dependent ID", function () {
-                var dependencyID = "../../../parent-of-only",
-                    dependentID = "only/two/deep",
-                    expectedResultID = "../parent-of-only";
-
-                expect(loader.resolveDependencyID(dependencyID, dependentID)).to.equal(expectedResultID);
-            });
-
-            it("should leave parent terms in place if above dependent ID", function () {
-                var dependencyID = "../../../there",
-                    dependentID = "in/here",
-                    expectedResultID = "../../there";
-
-                expect(loader.resolveDependencyID(dependencyID, dependentID)).to.equal(expectedResultID);
-            });
-
-            it("should resolve relative dependency IDs with same-directory term at start", function () {
-                var dependencyID = "./there/somewhere",
-                    dependentID = "module/in/here",
-                    expectedResultID = "module/in/there/somewhere";
-
-                expect(loader.resolveDependencyID(dependencyID, dependentID)).to.equal(expectedResultID);
-            });
-
-            it("should resolve relative dependency IDs with same-directory term in middle", function () {
-                var dependencyID = "module/in/./here/somewhere",
-                    dependentID = "",
-                    expectedResultID = "module/in/here/somewhere";
-
-                expect(loader.resolveDependencyID(dependencyID, dependentID)).to.equal(expectedResultID);
-            });
-
-            it("should resolve relative dependency IDs with multiple consecutive same-directory terms in middle", function () {
-                var dependencyID = "module/in/././././here/somewhere",
-                    dependentID = "",
-                    expectedResultID = "module/in/here/somewhere";
-
-                expect(loader.resolveDependencyID(dependencyID, dependentID)).to.equal(expectedResultID);
-            });
-
-            it("should resolve relative dependency IDs with same-directory '//' term in middle", function () {
-                var dependencyID = "module/in//here/somewhere",
-                    dependentID = "",
-                    expectedResultID = "module/in/here/somewhere";
-
-                expect(loader.resolveDependencyID(dependencyID, dependentID)).to.equal(expectedResultID);
-            });
-
-            it("should resolve relative dependency IDs with multiple consecutive same-directory '//' terms in middle", function () {
-                var dependencyID = "module/in////here/somewhere",
-                    dependentID = "",
-                    expectedResultID = "module/in/here/somewhere";
-
-                expect(loader.resolveDependencyID(dependencyID, dependentID)).to.equal(expectedResultID);
+            util.each({
+                "should resolve relative dependency IDs with parent term at start": {
+                    dependencyID: "../out/there",
+                    dependentID: "module/in/here",
+                    expectedResultID: "module/out/there"
+                },
+                "should resolve relative dependency IDs with parent term in middle": {
+                    dependencyID: "module/in/there/../here/somewhere",
+                    dependentID: "",
+                    expectedResultID: "module/in/here/somewhere"
+                },
+                "should not leave parent terms in place if alongside dependent ID": {
+                    dependencyID: "../../sibling-of-only",
+                    dependentID: "only/two/deep",
+                    expectedResultID: "sibling-of-only"
+                },
+                "should leave parent term in place if outside dependent ID": {
+                    dependencyID: "../../../parent-of-only",
+                    dependentID: "only/two/deep",
+                    expectedResultID: "../parent-of-only"
+                },
+                "should leave parent terms in place if above dependent ID": {
+                    dependencyID: "../../../there",
+                    dependentID: "in/here",
+                    expectedResultID: "../../there"
+                },
+                "should resolve relative dependency IDs with same-directory term at start": {
+                    dependencyID: "./there/somewhere",
+                    dependentID: "module/in/here",
+                    expectedResultID: "module/in/there/somewhere"
+                },
+                "should resolve relative dependency IDs with same-directory term in middle": {
+                    dependencyID: "module/in/./here/somewhere",
+                    dependentID: "",
+                    expectedResultID: "module/in/here/somewhere"
+                },
+                "should resolve relative dependency IDs with multiple consecutive same-directory terms in middle": {
+                    dependencyID: "module/in/././././here/somewhere",
+                    dependentID: "",
+                    expectedResultID: "module/in/here/somewhere"
+                },
+                "should resolve relative dependency IDs with same-directory '//' term in middle": {
+                    dependencyID: "module/in//here/somewhere",
+                    dependentID: "",
+                    expectedResultID: "module/in/here/somewhere"
+                },
+                "should resolve relative dependency IDs with multiple consecutive same-directory '//' terms in middle": {
+                    dependencyID: "module/in////here/somewhere",
+                    dependentID: "",
+                    expectedResultID: "module/in/here/somewhere"
+                },
+                "should leave terms in place that begin with one period at start of path (don't mistake for a same-directory term)": {
+                    dependencyID: ".git/awkward",
+                    dependentID: "",
+                    expectedResultID: ".git/awkward"
+                },
+                "should leave terms in place that end with one period at start of path (don't mistake for a same-directory term)": {
+                    dependencyID: "fun./awkward",
+                    dependentID: "",
+                    expectedResultID: "fun./awkward"
+                },
+                "should leave terms in place that begin with one period in middle of path (don't mistake for a same-directory term)": {
+                    dependencyID: "being/an/awkward/.git/today",
+                    dependentID: "",
+                    expectedResultID: "being/an/awkward/.git/today"
+                },
+                "should leave terms in place that end with one period in middle of path (don't mistake for a same-directory term)": {
+                    dependencyID: "being/gritted./today",
+                    dependentID: "",
+                    expectedResultID: "being/gritted./today"
+                },
+                "should leave terms in place that begin with two periods at start of path (don't mistake for a parent-directory term)": {
+                    dependencyID: "..not/up/anywhere",
+                    dependentID: "",
+                    expectedResultID: "..not/up/anywhere"
+                },
+                "should leave terms in place that end with two periods at start of path (don't mistake for a parent-directory term)": {
+                    dependencyID: "not../up/anywhere",
+                    dependentID: "",
+                    expectedResultID: "not../up/anywhere"
+                },
+                "should leave terms in place that begin with two periods in middle of path (don't mistake for a parent-directory term)": {
+                    dependencyID: "in/..arrgh/here",
+                    dependentID: "",
+                    expectedResultID: "in/..arrgh/here"
+                },
+                "should leave terms in place that end with two periods in middle of path (don't mistake for a parent-directory term)": {
+                    dependencyID: "in/arrgh../here",
+                    dependentID: "",
+                    expectedResultID: "in/arrgh../here"
+                }
+            }, function (data, description) {
+                it(description, function () {
+                    expect(loader.resolveDependencyID(data.dependencyID, data.dependentID)).to.equal(data.expectedResultID);
+                });
             });
 
             describe("ID mapping", function () {
