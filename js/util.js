@@ -43,6 +43,10 @@ define([
 
             options = options || {};
 
+            if (!xhr) {
+                return promise.reject(new Error("Util.get() :: XHR not available"));
+            }
+
             if (options.cache === false) {
                 uri += (uri.indexOf("?") > -1 ? "&" : "?") + "__r=" + Math.random();
             }
