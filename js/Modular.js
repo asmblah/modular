@@ -224,10 +224,6 @@
                     return this.dependencies;
                 },
 
-                getID: function () {
-                    return this.id;
-                },
-
                 getValue: function () {
                     var module = this;
 
@@ -294,7 +290,7 @@
                             },
                             dependencyValues: dependencyValues,
                             factory: module.factory,
-                            id: module.getID(),
+                            id: module.id,
                             loader: loader
                         });
                     }

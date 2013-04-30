@@ -63,7 +63,7 @@ define([
                             callback(lastDefine);
                         };
                         script.type = "text/javascript";
-                        script.src = module.getID().replace(/\.js/, "") + ".js";
+                        script.src = module.id.replace(/\.js/, "") + ".js";
                         head.appendChild(script);
                     }
                 });
