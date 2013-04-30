@@ -48,6 +48,7 @@ require({
         "./unit/js/Modular/UtilTest",
         "./unit/js/ModularTest",
         "./unit/js/UtilTest",
+        "./unit/indexTest",
         "./unit/modularTest"
     ], function () {
         mocha.run();
