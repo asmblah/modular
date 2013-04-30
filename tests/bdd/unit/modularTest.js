@@ -340,9 +340,9 @@ define([
                                             });
 
                                             util.each([
-                                                {id: "mod/ule", allowCached: false, random: 76, src: "http://the.com/base/url/mod/ule.js"},
-                                                {id: "a/module", allowCached: false, random: 123, src: "http://net.ted/uri/a/module.js"},
-                                                {id: "mod/ded", allowCached: true, random: 39487.3, src: "http://the.base/mod/ded.js"}
+                                                {id: "mod/ule", allowCached: false, random: 76},
+                                                {id: "a/module", allowCached: false, random: 123},
+                                                {id: "mod/ded", allowCached: true, random: 39487.3}
                                             ], function (fixture) {
                                                 describe("when the module's id is '" + fixture.id + "' and caching is " + (fixture.allowCached ? "" : "not ") + "allowed", function () {
                                                     beforeEach(function () {
