@@ -11,14 +11,13 @@
 
 (function (global) {
     "use strict";
-    /*global require, module */
 
     var hasOwn = {}.hasOwnProperty,
         slice = [].slice,
         get = function (obj, prop) {
             return obj[prop];
         },
-        undef = undefined, // Closure compiler seems happier with this, compresses smaller
+        undef,
         util = {
             each: function (obj, callback, options) {
                 var key,
