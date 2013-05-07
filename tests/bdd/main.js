@@ -13,7 +13,6 @@
 require({
     paths: {
         "js": "/../../js",
-        "root": "/../..",
         "vendor": "/../../vendor"
     }
 }, [

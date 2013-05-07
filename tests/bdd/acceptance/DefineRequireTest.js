@@ -13,11 +13,11 @@
 define([
     "vendor/chai/chai",
     "vendor/sinon/sinon",
-    "root/modular"
+    "Modular"
 ], function (
     chai,
     sinon,
-    modular
+    Modular
 ) {
     "use strict";
 
@@ -26,15 +26,8 @@ define([
     describe("define()/require()", function () {
         var loader;
 
-        beforeEach(function (done) {
-            modular.require([
-                "Modular"
-            ], function (
-                Modular
-            ) {
-                loader = new Modular();
-                done();
-            });
+        beforeEach(function () {
+            loader = new Modular();
         });
 
         it("should publish support for the AMD pattern", function () {

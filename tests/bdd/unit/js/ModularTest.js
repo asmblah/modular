@@ -12,14 +12,14 @@
 /*global define */
 define([
     "vendor/chai/chai",
-    "root/modular",
     "vendor/sinon/sinon",
-    "js/util"
+    "js/util",
+    "Modular"
 ], function (
     chai,
-    modular,
     sinon,
-    util
+    util,
+    Modular
 ) {
     "use strict";
 
@@ -28,15 +28,8 @@ define([
     describe("Modular", function () {
         var loader;
 
-        beforeEach(function (done) {
-            modular.require([
-                "Modular"
-            ], function (
-                Modular
-            ) {
-                loader = new Modular();
-                done();
-            });
+        beforeEach(function () {
+            loader = new Modular();
         });
 
         describe("transport/defineAnonymous", function () {

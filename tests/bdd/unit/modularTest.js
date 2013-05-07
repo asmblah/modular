@@ -12,12 +12,10 @@
 /*global define */
 define([
     "vendor/chai/chai",
-    "root/modular",
     "vendor/sinon/sinon",
     "js/util"
 ], function (
     chai,
-    modular,
     sinon,
     util
 ) {
