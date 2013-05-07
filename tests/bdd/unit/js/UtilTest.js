@@ -42,6 +42,42 @@ define([
             expect(Object.getPrototypeOf(util.constructor.prototype)).to.equal(modular.util);
         });
 
+        describe("from()", function () {
+            rootUtil.each([
+                {from: 0, to: 0},
+                {from: 1, to: 0},
+                {from: 0, to: 3},
+                {from: 4, to: 7}
+            ], function (scenario) {
+                var timesToCall = scenario.to - scenario.from + 1;
+
+                describe("when 'from' is '" + scenario.from + " and 'to' is '" + scenario.to + "'", function () {
+                    var callback;
+
+                    beforeEach(function () {
+                        callback = sinon.spy();
+                        util.from(scenario.from).to(scenario.to, callback);
+                    });
+
+                    it("should call 'callback' " + timesToCall + " time(s)", function () {
+                        expect(callback.callCount).to.equal(timesToCall);
+                    });
+
+                    rootUtil.from(1).to(timesToCall, function (callNumber, callIndex) {
+                        describe("when the callback is called for time #" + callNumber, function () {
+                            it("should pass the correct 'number' to the callback", function () {
+                                expect(callback.getCall(callIndex).args[0]).to.equal(scenario.from + callIndex);
+                            });
+
+                            it("should pass the correct 'index' to the callback", function () {
+                                expect(callback.getCall(callIndex).args[1]).to.equal(callIndex);
+                            });
+                        });
+                    });
+                });
+            });
+        });
+
         describe("global", function () {
             it("should return the global object", function () {
                 expect(util.global).to.equal(global);

@@ -34,6 +34,18 @@ define([
     Util.prototype.constructor = Util;
 
     util.extend(Util.prototype, {
+        from: function (from) {
+            return {
+                to: function (to, callback) {
+                    var number;
+
+                    for (number = from; number <= to; number += 1) {
+                        callback(number, number - from);
+                    }
+                }
+            };
+        },
+
         get: function (uri, options) {
             var util = this,
                 global = util.global,
