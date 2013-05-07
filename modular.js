@@ -49,6 +49,7 @@
                         anonymousDefine = args;
                     },
                     head = document.getElementsByTagName("head")[0],
+                    modularURI,
                     scripts = document.scripts,
                     useInteractiveScript = hasOwn.call(document, "uniqueID");
 
@@ -138,6 +139,9 @@
                         "baseUrl": getBase(document.baseURI || global.location.pathname),
                         "defineAnonymous": defineAnonymous,
                         "exclude": /^(https?:)?\/\//,
+                        "paths": {
+                            "Modular": modularURI
+                        },
                         "transport": function (callback, module) {
                             var uri = makePath(get(module.config, "baseUrl"), module.id);
 
@@ -180,18 +184,22 @@
                 if (global.define) {
                     if (global.define.amd) {
                         global.define([
-                            "./js/Modular"
+                            "./js/Modular",
+                            "module"
                         ], function (
-                            Modular
+                            Modular,
+                            module
                         ) {
                             var modular = new Modular();
+                            modularURI = getBase(module.id);
                             registerTransports(modular);
                             return modular;
                         });
                     }
                 } else {
                     (function (currentScript) {
-                        loadScript(getBase(currentScript.src) + "/js/Modular.js", function () {
+                        modularURI = getBase(currentScript.src);
+                        loadScript(modularURI + "/js/Modular.js", function () {
                             global.require([
                                 "modular"
                             ], function (

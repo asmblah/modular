@@ -64,8 +64,9 @@ define([
                 supportsScriptOnload: true,
                 baseURI: "http://world.net/path/to/righteousness",
                 baseUrl: "http://world.net/path/to",
-                modularSrc: "http://world.net/path/to/righteousness/modular.js",
-                ModularSrc: "http://world.net/path/to/righteousness/js/Modular.js",
+                modularBase: "http://another.world/path/to/righteousness",
+                modularSrc: "http://another.world/path/to/righteousness/modular.js",
+                ModularSrc: "http://another.world/path/to/righteousness/js/Modular.js",
                 dataMain: undefined,
                 domReady: false,
                 supportsDOMContentLoaded: true
@@ -78,8 +79,9 @@ define([
                 supportsScriptOnload: true,
                 baseURI: "http://world.net/path/to/righteousness",
                 baseUrl: "http://world.net/path/to",
-                modularSrc: "http://world.net/path/to/righteousness/modular.js",
-                ModularSrc: "http://world.net/path/to/righteousness/js/Modular.js",
+                modularBase: "http://another.world/path/to/righteousness",
+                modularSrc: "http://another.world/path/to/righteousness/modular.js",
+                ModularSrc: "http://another.world/path/to/righteousness/js/Modular.js",
                 dataMain: undefined,
                 domReady: true,
                 supportsDOMContentLoaded: false
@@ -91,8 +93,9 @@ define([
                 supportsScriptOnload: false,
                 baseURI: "http://world.net/path/to/righteousness",
                 baseUrl: "http://world.net/path/to",
-                modularSrc: "http://world.net/path/to/righteousness/modular.js",
-                ModularSrc: "http://world.net/path/to/righteousness/js/Modular.js",
+                modularBase: "http://another.world/path/to/righteousness",
+                modularSrc: "http://another.world/path/to/righteousness/modular.js",
+                ModularSrc: "http://another.world/path/to/righteousness/js/Modular.js",
                 dataMain: "a/module/to/remember",
                 domReady: true,
                 supportsDOMContentLoaded: true
@@ -231,7 +234,11 @@ define([
                             });
 
                             it("should request the Modular core module", function () {
-                                expect(global.define).to.have.been.calledWith(sinon.match(["./js/Modular"]));
+                                expect(global.define).to.have.been.calledWith(sinon.match.contains("./js/Modular"));
+                            });
+
+                            it("should request the 'module' named dependency", function () {
+                                expect(global.define).to.have.been.calledWith(sinon.match.contains("module"));
                             });
                         } else {
                             expectScriptToHaveLoaded(scenario.ModularSrc);
@@ -239,6 +246,7 @@ define([
 
                         describe("when loading the Modular core module", function () {
                             var modular,
+                                module,
                                 MockModular;
 
                             beforeEach(function () {
@@ -248,8 +256,12 @@ define([
                                 MockModular = function () {};
                                 MockModular.prototype.configure = sinon.spy();
 
+                                module = {
+                                    id: scenario.modularSrc
+                                };
+
                                 if (scenario.externalDefine) {
-                                    modular = global.define.getCall(0).args[1](MockModular);
+                                    modular = global.define.getCall(0).args[1](MockModular, module);
                                 } else {
                                     global.require = sinon.spy();
 
@@ -312,6 +324,22 @@ define([
 
                                         it("should not exclude paths with no protocol", function () {
                                             expect("/a/path/to/a/module").to.not.match(regex);
+                                        });
+                                    });
+
+                                    describe("with the 'paths' option", function () {
+                                        var paths;
+
+                                        beforeEach(function () {
+                                            paths = modular.configure.getCall(0).args[0].paths;
+                                        });
+
+                                        it("should add a path mapping for the 'Modular' namespace", function () {
+                                            expect(paths).to.have.property("Modular");
+                                        });
+
+                                        it("should add the correct path mapping for the 'Modular' namespace", function () {
+                                            expect(paths.Modular).to.equal(scenario.modularBase);
                                         });
                                     });
 

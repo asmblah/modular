@@ -18,10 +18,14 @@ require({
 }, [
     "require",
     "vendor/chai/chai",
+    "modular",
+    "vendor/sinon/sinon",
     "vendor/sinon-chai/lib/sinon-chai"
 ], function (
     require,
     chai,
+    modular,
+    sinon,
     sinonChai
 ) {
     "use strict";
@@ -33,6 +37,12 @@ require({
     });
 
     chai.use(sinonChai);
+
+    sinon.match.contains = function (element) {
+        return sinon.match(function (array) {
+            return modular.util.isArray(array) && array.indexOf(element) > -1;
+        }, "\"" + element + "\" in array");
+    };
 
     require({
         cache: false
