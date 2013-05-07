@@ -15,7 +15,7 @@ define([
     "require",
     "js/util",
     "vendor/sinon/sinon",
-    "Modular/Promise"
+    "js/Promise"
 ], function (
     chai,
     require,

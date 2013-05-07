@@ -55,6 +55,7 @@ require({
         "./integration/NamedModuleTest",
         "./unit/js/Modular/UtilTest",
         "./unit/js/ModularTest",
+        "./unit/js/PromiseTest",
         "./unit/js/UtilTest",
         "./unit/indexTest",
         "./unit/modularTest"

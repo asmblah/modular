@@ -10,9 +10,13 @@
  */
 
 /*global define */
-define([
+define({
+    "paths": {
+        "js": "./"
+    }
+}, [
     "modular",
-    "Modular/Promise"
+    "js/Promise"
 ], function (
     modular,
     Promise
