@@ -610,6 +610,25 @@ define([
                     done();
                 });
             });
+
+            it("should ignore a partial path mapping when a module has been defined with the exact ID", function (done) {
+                var value = {};
+
+                loader.define("do/not/ignore/me", value);
+
+                loader.require({
+                    paths: {
+                        "do": "somewhere/else"
+                    }
+                }, [
+                    "do/not/ignore/me"
+                ], function (
+                    importedValue
+                ) {
+                    expect(importedValue).to.equal(value);
+                    done();
+                });
+            });
         });
 
         describe("ID filtering", function () {

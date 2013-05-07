@@ -174,7 +174,9 @@
                     });
 
                     util.each(dependencyIDs, function (dependencyID, dependencyIndex) {
-                        dependencyID = loader.resolveDependencyID(dependencyID, module.id, get(module.config, "paths"), get(module.config, "exclude"));
+                        if (!loader.getModule(dependencyID)) {
+                            dependencyID = loader.resolveDependencyID(dependencyID, module.id, get(module.config, "paths"), get(module.config, "exclude"));
+                        }
 
                         if (dependencyID === "require") {
                             module.dependencies[dependencyIndex] = new Module(loader, module.config, null, function (arg1, arg2, arg3, arg4) {
