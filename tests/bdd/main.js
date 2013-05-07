@@ -41,7 +41,6 @@ require({
         "./acceptance/CommonJS/ExportsTest",
         "./acceptance/CommonJS/ModuleTest",
         "./acceptance/CommonJS/RequireTest",
-        "./acceptance/BrowserTest",
         "./acceptance/DefineRequireTest",
         "./acceptance/SampleProgramTest",
         "./integration/NamedModuleTest",
