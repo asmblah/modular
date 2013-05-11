@@ -99,6 +99,20 @@ define([
                 dataMain: "a/module/to/remember",
                 domReady: true,
                 supportsDOMContentLoaded: true
+            },
+            {
+                browser: true,
+                externalDefine: false,
+                supportsDocumentBaseURI: true,
+                supportsScriptOnload: false,
+                baseURI: "http://world.net/path/to/righteousness?some=query/with/slashes",
+                baseUrl: "http://world.net/path/to",
+                modularBase: "http://another.world/path/to/righteousness",
+                modularSrc: "http://another.world/path/to/righteousness/modular.js?another=query/with/slashes",
+                ModularSrc: "http://another.world/path/to/righteousness/js/Modular.js",
+                dataMain: "a/module/to/remember",
+                domReady: true,
+                supportsDOMContentLoaded: true
             }
         ], function (scenario) {
             describe("when the environment is" + (scenario.browser ? "": " not") + " a browser, define(...) is" + (scenario.externalDefine ? "" : " not") + " already defined" + (scenario.amdCompatible ? " and supports AMD" : "") + ", document.baseURI is" + (scenario.supportsDocumentBaseURI ? "" : " not") + " supported, script.onload is" + (scenario.supportsScriptOnload ? "" : " not") + " supported", function () {

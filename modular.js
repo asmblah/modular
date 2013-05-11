@@ -54,7 +54,7 @@
                     useInteractiveScript = hasOwn.call(document, "uniqueID");
 
                 function getBase(path) {
-                    return path.replace(/\/?[^\/]+$/, "");
+                    return path.replace(/\?[^?]+$/, "").replace(/\/?[^\/]+$/, "");
                 }
 
                 function load(script, args) {
