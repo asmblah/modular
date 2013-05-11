@@ -13,11 +13,11 @@
 define([
     "vendor/chai/chai",
     "vendor/sinon/sinon",
-    "root/modular"
+    "Modular"
 ], function (
     chai,
     sinon,
-    modular
+    Modular
 ) {
     "use strict";
 
@@ -26,15 +26,8 @@ define([
     describe("define()/require()", function () {
         var loader;
 
-        beforeEach(function (done) {
-            modular.require([
-                "Modular"
-            ], function (
-                Modular
-            ) {
-                loader = new Modular();
-                done();
-            });
+        beforeEach(function () {
+            loader = new Modular();
         });
 
         it("should publish support for the AMD pattern", function () {
@@ -569,6 +562,63 @@ define([
                     importedUltiLib
                 ) {
                     expect(importedUltiLib).to.equal(value);
+                    done();
+                });
+            });
+
+            it("should support a mapping with a same-directory relative path", function (done) {
+                var value = {};
+
+                loader.define("the/awesome/child/module", value);
+
+                loader.require({
+                    paths: {
+                        "child": "./child"
+                    }
+                }, "the/awesome/parent", [
+                    "child/module"
+                ], function (
+                    childModule
+                ) {
+                    expect(childModule).to.equal(value);
+                    done();
+                });
+            });
+
+            it("should support a mapping with a parent-directory relative path", function (done) {
+                var value = {};
+
+                loader.define("the/awesome/child/module", value);
+
+                loader.require({
+                    paths: {
+                        "child": "../awesome/child"
+                    }
+                }, "the/awesome/parent", [
+                    "child/module"
+                ], function (
+                    childModule
+                ) {
+                    expect(childModule).to.equal(value);
+                    done();
+                });
+            });
+
+            it("should ignore a partial path mapping when a module has been defined with the exact ID", function (done) {
+                var value = {};
+
+                loader.define("do/not/ignore/me", value);
+
+                loader.require({
+                    paths: {
+                        "do": "somewhere/else"
+                    }
+                }, [
+                    "do/not/ignore/me"
+                ], function (
+                    importedValue
+                ) {
+                    expect(importedValue).to.equal(value);
                     done();
                 });
             });
