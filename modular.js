@@ -181,22 +181,7 @@
                 }
 
                 // Don't override an existing AMD loader: instead, register the Modular instance
-                if (global.define) {
-                    if (global.define.amd) {
-                        global.define([
-                            "./js/Modular",
-                            "module"
-                        ], function (
-                            Modular,
-                            module
-                        ) {
-                            var modular = new Modular();
-                            modularURI = getBase(module.id);
-                            registerTransports(modular);
-                            return modular;
-                        });
-                    }
-                } else {
+                if (!global.define) {
                     (function (currentScript) {
                         modularURI = getBase(currentScript.src);
                         loadScript(modularURI + "/js/Modular.js", function () {

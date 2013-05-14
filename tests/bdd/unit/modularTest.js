@@ -49,8 +49,7 @@ define([
         util.each([
             {
                 browser: false,
-                externalDefine: true,
-                amdCompatible: true
+                externalDefine: true
             },
             {
                 browser: false,
@@ -59,7 +58,6 @@ define([
             {
                 browser: true,
                 externalDefine: true,
-                amdCompatible: false,
                 supportsDocumentBaseURI: true,
                 supportsScriptOnload: true,
                 baseURI: "http://world.net/path/to/righteousness",
@@ -74,7 +72,6 @@ define([
             {
                 browser: true,
                 externalDefine: true,
-                amdCompatible: true,
                 supportsDocumentBaseURI: true,
                 supportsScriptOnload: true,
                 baseURI: "http://world.net/path/to/righteousness",
@@ -115,7 +112,7 @@ define([
                 supportsDOMContentLoaded: true
             }
         ], function (scenario) {
-            describe("when the environment is" + (scenario.browser ? "": " not") + " a browser, define(...) is" + (scenario.externalDefine ? "" : " not") + " already defined" + (scenario.amdCompatible ? " and supports AMD" : "") + ", document.baseURI is" + (scenario.supportsDocumentBaseURI ? "" : " not") + " supported, script.onload is" + (scenario.supportsScriptOnload ? "" : " not") + " supported", function () {
+            describe("when the environment is" + (scenario.browser ? "": " not") + " a browser, define(...) is" + (scenario.externalDefine ? "" : " not") + " already defined, document.baseURI is" + (scenario.supportsDocumentBaseURI ? "" : " not") + " supported, script.onload is" + (scenario.supportsScriptOnload ? "" : " not") + " supported", function () {
                 beforeEach(function () {
                     if (scenario.browser) {
                         modularScript = {
@@ -168,10 +165,6 @@ define([
 
                     if (scenario.externalDefine) {
                         global.define = sinon.spy();
-
-                        if (scenario.amdCompatible) {
-                            global.define.amd = {};
-                        }
                     }
                 });
 
@@ -241,22 +234,8 @@ define([
                         });
                     }
 
-                    if (scenario.browser && (!scenario.externalDefine || scenario.amdCompatible)) {
-                        if (scenario.amdCompatible) {
-                            it("should call define(...) once", function () {
-                                expect(global.define).to.have.been.calledOnce;
-                            });
-
-                            it("should request the Modular core module", function () {
-                                expect(global.define).to.have.been.calledWith(sinon.match.contains("./js/Modular"));
-                            });
-
-                            it("should request the 'module' named dependency", function () {
-                                expect(global.define).to.have.been.calledWith(sinon.match.contains("module"));
-                            });
-                        } else {
-                            expectScriptToHaveLoaded(scenario.ModularSrc);
-                        }
+                    if (scenario.browser && !scenario.externalDefine) {
+                        expectScriptToHaveLoaded(scenario.ModularSrc);
 
                         describe("when loading the Modular core module", function () {
                             var modular,
