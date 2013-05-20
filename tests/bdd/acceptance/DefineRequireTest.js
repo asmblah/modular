@@ -585,6 +585,25 @@ define([
                 });
             });
 
+            it("should support a mapping with a same-directory relative path when the dependent ID is only one term wide", function (done) {
+                var value = {};
+
+                loader.define("to/module", value);
+
+                loader.require({
+                    paths: {
+                        "from": "./to"
+                    }
+                }, "the", [
+                    "from/module"
+                ], function (
+                    childModule
+                ) {
+                    expect(childModule).to.equal(value);
+                    done();
+                });
+            });
+
             it("should support a mapping with a parent-directory relative path", function (done) {
                 var value = {};
 
@@ -596,6 +615,25 @@ define([
                     }
                 }, "the/awesome/parent", [
                     "child/module"
+                ], function (
+                    childModule
+                ) {
+                    expect(childModule).to.equal(value);
+                    done();
+                });
+            });
+
+            it("should support a mapping with a parent-directory relative path when the dependent ID is only one term wide", function (done) {
+                var value = {};
+
+                loader.define("../to/module", value);
+
+                loader.require({
+                    paths: {
+                        "from": "../to"
+                    }
+                }, "the", [
+                    "from/module"
                 ], function (
                     childModule
                 ) {

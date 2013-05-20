@@ -160,7 +160,7 @@
                     if (module.id !== null) {
                         util.each(get(module.config, "paths"), function (path, index, paths) {
                             if (/^\.\.?\//.test(path)) {
-                                paths[index] = module.id.replace(/\/[^\/]*$/, "") + "/" + path;
+                                paths[index] = module.id.replace(/(^|\/)[^\/]*$/, "") + "/" + path;
                             }
                         });
                     }
