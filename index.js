@@ -53,27 +53,23 @@
                 args.callback();
             },
             "transport": function (callback, module) {
-                fs.realpath(makePath(module.config.baseUrl, module.id), function (error, path) {
+                var path = fs.realpathSync(makePath(module.config.baseUrl, module.id));
+
+                fs.readFile(path, "utf8", function (error, code) {
                     if (error) {
                         throw error;
                     }
 
-                    fs.readFile(path, "utf8", function (error, code) {
-                        if (error) {
-                            throw error;
-                        }
-
-                        module.config.exec({
-                            callback: function () {
-                                // Clear anonymousDefine to ensure it is not reused
-                                // when the next module doesn't perform anonymous define(...)
-                                var args = anonymousDefine;
-                                anonymousDefine = null;
-                                callback(args);
-                            },
-                            code: code,
-                            path: path
-                        });
+                    module.config.exec({
+                        callback: function () {
+                            // Clear anonymousDefine to ensure it is not reused
+                            // when the next module doesn't perform anonymous define(...)
+                            var args = anonymousDefine;
+                            anonymousDefine = null;
+                            callback(args);
+                        },
+                        code: code,
+                        path: path
                     });
                 });
             }
