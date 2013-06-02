@@ -76,7 +76,7 @@ define([
 
         it("should throw an error if null is specified as a dependency id", function () {
             expect(function () {
-                loader.define("test", [ null ], {});
+                loader.require("test", [ null ], {});
             }).to.Throw(/Invalid dependency id/);
         });
 
@@ -604,6 +604,33 @@ define([
                 });
             });
 
+            it("should support an inherited mapping with a same-directory relative path", function (done) {
+                var value = {};
+
+                loader.define("and/also/to/the/beach", value);
+
+                loader.define("sandy", [
+                    "from/the/beach"
+                ], function (
+                    grain
+                ) {
+                    return grain;
+                });
+
+                loader.require({
+                    paths: {
+                        "from": "./to"
+                    }
+                }, "and/also/world", [
+                    "sandy"
+                ], function (
+                    childModule
+                ) {
+                    expect(childModule).to.equal(value);
+                    done();
+                });
+            });
+
             it("should support a mapping with a parent-directory relative path", function (done) {
                 var value = {};
 
@@ -634,6 +661,87 @@ define([
                     }
                 }, "the", [
                     "from/module"
+                ], function (
+                    childModule
+                ) {
+                    expect(childModule).to.equal(value);
+                    done();
+                });
+            });
+
+            it("should support an inherited mapping with a parent-directory relative path", function (done) {
+                var value = {};
+
+                loader.define("and/to/the/beach", value);
+
+                loader.define("sandy", [
+                    "from/the/beach"
+                ], function (
+                    grain
+                ) {
+                    return grain;
+                });
+
+                loader.require({
+                    paths: {
+                        "from": "../to"
+                    }
+                }, "and/also/world", [
+                    "sandy"
+                ], function (
+                    childModule
+                ) {
+                    expect(childModule).to.equal(value);
+                    done();
+                });
+            });
+
+            it("should support an inherited mapping with a parent-directory relative path pointing above the base URI", function (done) {
+                var value = {};
+
+                loader.define("../to/the/beach", value);
+
+                loader.define("sandy", [
+                    "from/the/beach"
+                ], function (
+                    grain
+                ) {
+                    return grain;
+                });
+
+                loader.require({
+                    paths: {
+                        "from": "../../to"
+                    }
+                }, "here/world", [
+                    "sandy"
+                ], function (
+                    childModule
+                ) {
+                    expect(childModule).to.equal(value);
+                    done();
+                });
+            });
+
+            it("should support an inherited mapping with a parent-directory relative path pointing above the base URI and a dependent ID pointing above the base URI", function (done) {
+                var value = {};
+
+                loader.define("../../../to/beach", value);
+
+                loader.define("it's/sandy", [
+                    "from/beach"
+                ], function (
+                    grain
+                ) {
+                    return grain;
+                });
+
+                loader.require({
+                    paths: {
+                        "from": "../../../to"
+                    }
+                }, "../here/world", [
+                    "it's/sandy"
                 ], function (
                     childModule
                 ) {

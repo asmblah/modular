@@ -121,16 +121,18 @@
         Module = (function () {
             var UNDEFINED = 1,
                 TRANSPORTING = 2,
-                FILTERING = 3,
-                DEFINED = 4,
-                DEFERRED = 5,
-                LOADING = 6,
-                LOADED = 7;
+                DEFINED = 3,
+                FILTERING = 4,
+                FILTERED = 5,
+                DEFERRED = 6,
+                LOADING = 7,
+                LOADED = 8;
 
             function Module(loader, config, id, value) {
                 var module = this;
                 this.config = util.extend({}, config);
                 this.dependencies = [];
+                this.dependencyIDs = null;
                 this.factory = null;
                 this.id = id || null;
                 this.loader = loader;
@@ -148,77 +150,14 @@
                 };
             }
             util.extend(Module.prototype, {
-                define: function (config, dependencyIDs, factory, callback) {
-                    var loader = this.loader,
-                        module = this,
-                        idFilter,
-                        funnel = new Funnel();
+                define: function (config, dependencyIDs, factory) {
+                    var module = this;
 
                     util.extend(module.config, config);
 
-                    // Process relative path mappings
-                    if (module.id !== null) {
-                        util.each(get(module.config, "paths"), function (path, index, paths) {
-                            if (/^\.\.?\//.test(path)) {
-                                paths[index] = module.id.replace(/(^|\/)[^\/]*$/, "") + "/" + path;
-                            }
-                        });
-                    }
-
-                    idFilter = get(module.config, "idFilter");
-
-                    util.extend(module.commonJSModule, {
-                        config: module.config,
-                        id: module.id,
-                        uri: module.id
-                    });
-
-                    util.each(dependencyIDs, function (dependencyID, dependencyIndex) {
-                        if (!loader.getModule(dependencyID)) {
-                            dependencyID = loader.resolveDependencyID(dependencyID, module.id, get(module.config, "paths"), get(module.config, "exclude"));
-                        }
-
-                        if (dependencyID === "require") {
-                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, function (arg1, arg2, arg3, arg4) {
-                                var args = loader.parseArgs(arg1, arg2, arg3, arg4),
-                                    config = util.extend({}, module.config, args.config);
-                                return loader.require(config, args.id || module.id, args.dependencyIDs, args.factory);
-                            });
-                        } else if (dependencyID === "exports") {
-                            if (util.isUndefined(module.commonJSModule.exports)) {
-                                module.commonJSModule.exports = {};
-                            }
-                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, module.commonJSModule.exports);
-                        } else if (dependencyID === "module") {
-                            if (util.isUndefined(module.commonJSModule.exports)) {
-                                module.commonJSModule.exports = {};
-                            }
-                            module.dependencies[dependencyIndex] = new Module(loader, module.config, null, module.commonJSModule);
-                        } else {
-                            idFilter(dependencyID, funnel.add(function (dependencyID) {
-                                var dependency = loader.getModule(dependencyID);
-
-                                if (dependency) {
-                                    util.extend(dependency.config, module.config);
-                                } else {
-                                    dependency = loader.createModule(dependencyID, module.config);
-                                }
-
-                                module.dependencies[dependencyIndex] = dependency;
-                            }));
-                        }
-                    });
-
+                    module.dependencyIDs = dependencyIDs;
                     module.factory = factory;
-
-                    module.mode = FILTERING;
-
-                    funnel.done(function () {
-                        module.mode = DEFINED;
-                        if (callback) {
-                            callback();
-                        }
-                    });
+                    module.mode = DEFINED;
                 },
 
                 getDependencies: function () {
@@ -236,7 +175,7 @@
                 },
 
                 isDefined: function () {
-                    return this.mode >= FILTERING;
+                    return this.mode >= DEFINED;
                 },
 
                 isLoaded: function () {
@@ -314,6 +253,78 @@
                         });
                     }
 
+                    function resolveDependencies(callback) {
+                        var baseID,
+                            idFilter,
+                            funnel = new Funnel();
+
+                        // Process relative path mappings
+                        if (module.id !== null) {
+                            baseID = module.id.replace(/(^|\/)[^\/]*$/, "$1");
+
+                            if (/^\.\.?\//.test(baseID)) {
+                                baseID = "/" + baseID;
+                            }
+
+                            util.each(get(module.config, "paths"), function (path, index, paths) {
+                                if (/^\.\.?\//.test(path)) {
+                                    paths[index] = baseID + path;
+                                }
+                            });
+                        }
+
+                        idFilter = get(module.config, "idFilter");
+
+                        util.extend(module.commonJSModule, {
+                            config: module.config,
+                            id: module.id,
+                            uri: module.id
+                        });
+
+                        util.each(module.dependencyIDs, function (dependencyID, dependencyIndex) {
+                            if (!loader.getModule(dependencyID)) {
+                                dependencyID = loader.resolveDependencyID(dependencyID, module.id, get(module.config, "paths"), get(module.config, "exclude"));
+                            }
+
+                            if (dependencyID === "require") {
+                                module.dependencies[dependencyIndex] = new Module(loader, module.config, null, function (arg1, arg2, arg3, arg4) {
+                                    var args = loader.parseArgs(arg1, arg2, arg3, arg4),
+                                        config = util.extend({}, module.config, args.config);
+                                    return loader.require(config, args.id || module.id, args.dependencyIDs, args.factory);
+                                });
+                            } else if (dependencyID === "exports") {
+                                if (util.isUndefined(module.commonJSModule.exports)) {
+                                    module.commonJSModule.exports = {};
+                                }
+                                module.dependencies[dependencyIndex] = new Module(loader, module.config, null, module.commonJSModule.exports);
+                            } else if (dependencyID === "module") {
+                                if (util.isUndefined(module.commonJSModule.exports)) {
+                                    module.commonJSModule.exports = {};
+                                }
+                                module.dependencies[dependencyIndex] = new Module(loader, module.config, null, module.commonJSModule);
+                            } else {
+                                idFilter(dependencyID, funnel.add(function (dependencyID) {
+                                    var dependency = loader.getModule(dependencyID);
+
+                                    if (dependency) {
+                                        util.extend(dependency.config, module.config);
+                                    } else {
+                                        dependency = loader.createModule(dependencyID, module.config);
+                                    }
+
+                                    module.dependencies[dependencyIndex] = dependency;
+                                }));
+                            }
+                        });
+
+                        module.mode = FILTERING;
+
+                        funnel.done(function () {
+                            module.mode = FILTERED;
+                            loadDependencies(callback);
+                        });
+                    }
+
                     function completeDefine(define) {
                         if (!define) {
                             define = {
@@ -323,9 +334,8 @@
                             };
                         }
 
-                        module.define(define.config, define.dependencyIDs, define.factory, function () {
-                            loadDependencies();
-                        });
+                        module.define(define.config, define.dependencyIDs, define.factory);
+                        resolveDependencies();
                     }
 
                     if (module.mode === UNDEFINED) {
@@ -340,7 +350,7 @@
                             module.requesterQueue.push(callback);
                         }
                     } else if (module.mode === DEFINED) {
-                        loadDependencies(callback);
+                        resolveDependencies(callback);
                     } else if (module.mode === LOADED) {
                         if (callback) {
                             callback(module.getValue());
@@ -526,14 +536,18 @@
                                     portion,
                                     index;
 
-                                if (mappings[id]) {
-                                    return mappings[id];
+                                function getMapping(id) {
+                                    return mappings[id] || mappings["/" + id];
+                                }
+
+                                if (getMapping(id)) {
+                                    return getMapping(id);
                                 }
 
                                 for (index = terms.length - 1; index >= 0; index -= 1) {
                                     portion = terms.slice(0, index).join("/");
-                                    if (mappings[portion] || mappings[portion + "/"]) {
-                                        return (mappings[portion] || mappings[portion + "/"]).replace(/\/$/, "") + "/" + terms.slice(index).join("/");
+                                    if (getMapping(portion) || getMapping(portion + "/")) {
+                                        return (getMapping(portion) || getMapping(portion + "/")).replace(/\/$/, "") + "/" + terms.slice(index).join("/");
                                     }
                                 }
                                 return id;
@@ -572,9 +586,8 @@
                     } else {
                         module = new Module(this, this.config, id);
 
-                        module.define(args.config, args.dependencyIDs, args.factory, function () {
-                            module.load();
-                        });
+                        module.define(args.config, args.dependencyIDs, args.factory);
+                        module.load();
                     }
                 },
 
