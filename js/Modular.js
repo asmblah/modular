@@ -14,6 +14,15 @@
 
     var hasOwn = {}.hasOwnProperty,
         slice = [].slice,
+        extendConfig = function (target) {
+            util.each(slice.call(arguments, 1), function (obj) {
+                util.each(obj, function (val, key) {
+                    target[key] = (key === "paths") ? util.extend({}, target[key], val) : val;
+                }, { keys: true });
+            });
+
+            return target;
+        },
         get = function (obj, prop) {
             return obj[prop];
         },
@@ -130,7 +139,7 @@
 
             function Module(loader, config, id, value) {
                 var module = this;
-                this.config = util.extend({}, config);
+                this.config = {};
                 this.dependencies = [];
                 this.dependencyIDs = null;
                 this.factory = null;
@@ -148,16 +157,38 @@
                     },
                     exports: value
                 };
+
+                this.extendConfig(config);
             }
             util.extend(Module.prototype, {
                 define: function (config, dependencyIDs, factory) {
                     var module = this;
 
-                    util.extend(module.config, config);
+                    module.extendConfig(config);
 
                     module.dependencyIDs = dependencyIDs;
                     module.factory = factory;
                     module.mode = DEFINED;
+                },
+
+                extendConfig: function () {
+                    var baseID,
+                        module = this;
+
+                    extendConfig.apply(null, [module.config].concat(slice.call(arguments)));
+
+                    // Process relative path mappings - if module ID is null, use base directory
+                    baseID = (module.id || "/").replace(/(^|\/)[^\/]*$/, "$1");
+
+                    if (/^\.\.?\//.test(baseID)) {
+                        baseID = "/" + baseID;
+                    }
+
+                    util.each(get(module.config, "paths"), function (path, index, paths) {
+                        if (/^\.\.?\//.test(path)) {
+                            paths[index] = baseID + path;
+                        }
+                    });
                 },
 
                 getDependencies: function () {
@@ -254,24 +285,8 @@
                     }
 
                     function resolveDependencies(callback) {
-                        var baseID,
-                            idFilter,
+                        var idFilter,
                             funnel = new Funnel();
-
-                        // Process relative path mappings
-                        if (module.id !== null) {
-                            baseID = module.id.replace(/(^|\/)[^\/]*$/, "$1");
-
-                            if (/^\.\.?\//.test(baseID)) {
-                                baseID = "/" + baseID;
-                            }
-
-                            util.each(get(module.config, "paths"), function (path, index, paths) {
-                                if (/^\.\.?\//.test(path)) {
-                                    paths[index] = baseID + path;
-                                }
-                            });
-                        }
 
                         idFilter = get(module.config, "idFilter");
 
@@ -289,7 +304,7 @@
                             if (dependencyID === "require") {
                                 module.dependencies[dependencyIndex] = new Module(loader, module.config, null, function (arg1, arg2, arg3, arg4) {
                                     var args = loader.parseArgs(arg1, arg2, arg3, arg4),
-                                        config = util.extend({}, module.config, args.config);
+                                        config = extendConfig({}, module.config, args.config);
                                     return loader.require(config, args.id || module.id, args.dependencyIDs, args.factory);
                                 });
                             } else if (dependencyID === "exports") {
@@ -307,7 +322,7 @@
                                     var dependency = loader.getModule(dependencyID);
 
                                     if (dependency) {
-                                        util.extend(dependency.config, module.config);
+                                        dependency.extendConfig(module.config);
                                     } else {
                                         dependency = loader.createModule(dependencyID, module.config);
                                     }
@@ -388,7 +403,7 @@
             util.extend(Modular.prototype, {
                 configure: function (config) {
                     if (config) {
-                        util.extend(this.config, config);
+                        extendConfig(this.config, config);
                     } else {
                         return this.config;
                     }
@@ -441,7 +456,7 @@
                         module;
 
                     if (id === null) {
-                        get(util.extend({}, this.config, args.config), "defineAnonymous")(args);
+                        get(extendConfig({}, this.config, args.config), "defineAnonymous")(args);
                     } else {
                         module = this.getModule(id);
                         if (module) {
@@ -449,7 +464,7 @@
                                 throw new Error("Module '" + id + "' has already been defined");
                             }
                         } else {
-                            module = this.createModule(id, util.extend({}, this.config, args.config));
+                            module = this.createModule(id, extendConfig({}, this.config, args.config));
                         }
 
                         module.define(args.config, args.dependencyIDs, args.factory);

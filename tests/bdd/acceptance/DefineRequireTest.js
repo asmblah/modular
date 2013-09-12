@@ -245,6 +245,32 @@ define([
             });
         });
 
+        it("should resolve relative dependency IDs relative to the first module", function (done) {
+            loader.define("in/a/folder", [
+                "libraries/here"
+            ], function () {});
+
+            loader.define("in/another/folder", [
+                "libraries/here"
+            ], function () {});
+
+            loader.define("actually/here", {});
+
+            loader.require({
+                paths: {
+                    "libraries": "./actually"
+                },
+                transport: function () {
+                    debugger;
+                }
+            }, [
+                "in/a/folder",
+                "in/another/folder"
+            ], function () {
+                done();
+            });
+        });
+
         it("should only evaluate a factory function for a module once", function (done) {
             var factory = function () { return {}; };
 
