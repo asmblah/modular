@@ -178,7 +178,7 @@
                     extendConfig.apply(null, [module.config].concat(slice.call(arguments)));
 
                     // Process relative path mappings - if module ID is null, use base directory
-                    baseID = (module.id || "/").replace(/(^|\/)[^\/]*$/, "$1");
+                    baseID = (module.id || "").replace(/(^|\/)[^\/]*$/, "$1") || "/";
 
                     if (/^\.\.?\//.test(baseID)) {
                         baseID = "/" + baseID;

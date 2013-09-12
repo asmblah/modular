@@ -245,7 +245,7 @@ define([
             });
         });
 
-        it("should resolve relative dependency IDs relative to the first module", function (done) {
+        it("should resolve relative dependency IDs relative to the first module when the first module has no ID", function (done) {
             loader.define("in/a/folder", [
                 "libraries/here"
             ], function () {});
@@ -261,6 +261,29 @@ define([
                     "libraries": "./actually"
                 }
             }, [
+                "in/a/folder",
+                "in/another/folder"
+            ], function () {
+                done();
+            });
+        });
+
+        it("should resolve relative dependency IDs relative to the first module when the first module is in the base directory", function (done) {
+            loader.define("in/a/folder", [
+                "libraries/here"
+            ], function () {});
+
+            loader.define("in/another/folder", [
+                "libraries/here"
+            ], function () {});
+
+            loader.define("actually/here", {});
+
+            loader.require({
+                paths: {
+                    "libraries": "./actually"
+                }
+            }, "in-base", [
                 "in/a/folder",
                 "in/another/folder"
             ], function () {
