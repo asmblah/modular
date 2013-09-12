@@ -259,9 +259,6 @@ define([
             loader.require({
                 paths: {
                     "libraries": "./actually"
-                },
-                transport: function () {
-                    debugger;
                 }
             }, [
                 "in/a/folder",
