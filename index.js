@@ -43,6 +43,7 @@
         }
 
         modular.configure({
+            "async": true,
             "baseUrl": process.cwd(),
             "defineAnonymous": function (args) {
                 anonymousDefine = args;
@@ -55,7 +56,7 @@
             "transport": function (callback, module) {
                 var path = fs.realpathSync(makePath(module.config.baseUrl, module.id));
 
-                fs.readFile(path, "utf8", function (error, code) {
+                function load(error, code) {
                     if (error) {
                         throw error;
                     }
@@ -71,7 +72,22 @@
                         code: code,
                         path: path
                     });
-                });
+                }
+
+                if (module.config.async) {
+                    fs.readFile(path, "utf8", load);
+                } else {
+                    (function () {
+                        var code;
+                        try {
+                            code = fs.readFileSync(path, "utf8");
+                        } catch (error) {
+                            load(error);
+                            return;
+                        }
+                        load(null, code);
+                    }());
+                }
             }
         });
     }());
