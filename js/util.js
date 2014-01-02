@@ -50,7 +50,7 @@ define({
             };
         },
 
-        get: function (uri, options) {
+        "get": function (uri, options) {
             var util = this,
                 global = util.global,
                 promise = new Promise(),

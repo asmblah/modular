@@ -12,17 +12,17 @@
 (function (global) {
     "use strict";
 
-    var hasOwn = {}.hasOwnProperty,
-        slice = [].slice,
-        extendConfig = function (target) {
-            util.each(slice.call(arguments, 1), function (obj) {
-                util.each(obj, function (val, key) {
-                    target[key] = (key === "paths") ? util.extend({}, target[key], val) : val;
-                }, { keys: true });
-            });
+    function extendConfig(target, sources) {
+        util.each(sources, function (obj) {
+            util.each(obj, function (val, key) {
+                target[key] = (key === "paths") ? util.extend({}, target[key], val) : val;
+            }, { keys: true });
+        });
 
-            return target;
-        },
+        return target;
+    }
+
+    var hasOwn = {}.hasOwnProperty,
         get = function (obj, prop) {
             return obj[prop];
         },
@@ -32,7 +32,7 @@
                 var key,
                     length;
 
-                if (!obj) {
+                if (!obj || typeof obj !== "object") {
                     return;
                 }
 
@@ -55,8 +55,8 @@
                 }
             },
 
-            extend: function (target) {
-                util.each(slice.call(arguments, 1), function (obj) {
+            extend: function (target, source1, source2) {
+                util.each([source1, source2], function (obj) {
                     util.each(obj, function (val, key) {
                         target[key] = val;
                     }, { keys: true });
@@ -66,17 +66,19 @@
             },
 
             getType: function (obj) {
-                return {}.toString.call(obj).match(/\[object ([\s\S]*)\]/)[1];
+                /*jshint eqnull: true */
+
+                return obj != null && {}.toString.call(obj).match(/\[object ([\s\S]*)\]/)[1];
             },
 
             global: global,
 
-            isArray: function (str) {
-                return util.getType(str) === "Array";
+            isArray: function (value) {
+                return util.getType(value) === "Array";
             },
 
-            isFunction: function (str) {
-                return util.getType(str) === "Function";
+            isFunction: function (value) {
+                return util.getType(value) === "Function";
             },
 
             isPlainObject: function (obj) {
@@ -102,8 +104,8 @@
 
                     funnel.pending += 1;
 
-                    return function () {
-                        var result = callback.apply(this, arguments);
+                    return function (arg1, arg2, arg3, arg4) {
+                        var result = callback.call(this, arg1, arg2, arg3, arg4);
 
                         funnel.pending -= 1;
                         if (funnel.pending === 0) {
@@ -158,24 +160,24 @@
                     exports: value
                 };
 
-                this.extendConfig(config);
+                this.extendConfig([config]);
             }
             util.extend(Module.prototype, {
                 define: function (config, dependencyIDs, factory) {
                     var module = this;
 
-                    module.extendConfig(config);
+                    module.extendConfig([config]);
 
                     module.dependencyIDs = dependencyIDs;
                     module.factory = factory;
                     module.mode = DEFINED;
                 },
 
-                extendConfig: function () {
+                extendConfig: function (sources) {
                     var baseID,
                         module = this;
 
-                    extendConfig.apply(null, [module.config].concat(slice.call(arguments)));
+                    extendConfig(module.config, sources);
 
                     // Process relative path mappings - if module ID is null, use base directory
                     baseID = (module.id || "").replace(/(^|\/)[^\/]*$/, "$1") || "/";
@@ -304,7 +306,7 @@
                             if (dependencyID === "require") {
                                 module.dependencies[dependencyIndex] = new Module(loader, module.config, null, function (arg1, arg2, arg3, arg4) {
                                     var args = loader.parseArgs(arg1, arg2, arg3, arg4),
-                                        config = extendConfig({}, module.config, args.config);
+                                        config = extendConfig({}, [module.config, args.config]);
                                     return loader.require(config, args.id || module.id, args.dependencyIDs, args.factory);
                                 });
                             } else if (dependencyID === "exports") {
@@ -322,7 +324,7 @@
                                     var dependency = loader.getModule(dependencyID);
 
                                     if (dependency) {
-                                        dependency.extendConfig(module.config);
+                                        dependency.extendConfig([module.config]);
                                     } else {
                                         dependency = loader.createModule(dependencyID, module.config);
                                     }
@@ -403,7 +405,7 @@
             util.extend(Modular.prototype, {
                 configure: function (config) {
                     if (config) {
-                        extendConfig(this.config, config);
+                        extendConfig(this.config, [config]);
                     } else {
                         return this.config;
                     }
@@ -456,7 +458,7 @@
                         module;
 
                     if (id === null) {
-                        get(extendConfig({}, this.config, args.config), "defineAnonymous")(args);
+                        get(extendConfig({}, [this.config, args.config]), "defineAnonymous")(args);
                     } else {
                         module = this.getModule(id);
                         if (module) {
@@ -464,7 +466,7 @@
                                 throw new Error("Module '" + id + "' has already been defined");
                             }
                         } else {
-                            module = this.createModule(id, extendConfig({}, this.config, args.config));
+                            module = this.createModule(id, extendConfig({}, [this.config, args.config]));
                         }
 
                         module.define(args.config, args.dependencyIDs, args.factory);
@@ -583,7 +585,7 @@
                     return id;
                 },
 
-                require: function (arg1, arg2, arg3, arg4) {
+                "require": function (arg1, arg2, arg3, arg4) {
                     var args = this.parseArgs(arg1, arg2, arg3, arg4),
                         id = args.id,
                         module;
